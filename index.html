@@ -30,7 +30,10 @@
   <!-- Header dell'App -->
   <header class="app-header no-print">
     <div class="header-content">
-      <h1>Rintracciabilità Gastronomia</h1>
+      <div class="brand-wrapper">
+        <img id="app-header-logo" src="icon.jpg" alt="Logo" class="header-app-logo">
+        <h1>Rintracciabilità Gastronomia</h1>
+      </div>
       <span class="status-indicator online" id="connection-status">Online</span>
     </div>
   </header>
@@ -124,7 +127,7 @@
             </div>
           </div>
 
-          <!-- Banner Suggerimento Lotto Già Usato nella stessa sessione -->
+          <!-- Banner Suggerimento Lotto Già Usato -->
           <div id="smart-reuse-banner" class="smart-banner hidden">
             <div class="smart-banner-icon">💡</div>
             <div class="smart-banner-content">
@@ -134,21 +137,30 @@
             <button id="btn-apply-smart-reuse" class="btn btn-secondary btn-sm">Usa Questo Lotto</button>
           </div>
 
-          <!-- Scanner Fotocamera OCR -->
+          <!-- SCANNER FOTOCAMERA GUIDATO A 2 PASSI -->
           <div class="scanner-container">
+            <!-- Badge di guida visiva (Passo 1: Lotto / Passo 2: Scadenza) -->
+            <div class="scan-step-header">
+              <span id="scan-step-indicator" class="scan-step-badge step-1">PASSO 1: Scansiona il Codice LOTTO</span>
+              <button id="btn-switch-ocr-mode" class="btn-text-action" style="font-size: 11px;">Passa a Scadenza →</button>
+            </div>
+
             <div class="video-wrapper">
               <video id="scanner-video" autoplay playsinline muted></video>
               <canvas id="scanner-overlay" class="hidden"></canvas>
-              <div class="scan-target-box">
+              
+              <!-- Mirino Dinamico (Cambia colore tra Blu Lotto e Verde Scadenza) -->
+              <div id="scan-target-box" class="scan-target-box step-1-mode">
                 <div class="corner top-left"></div>
                 <div class="corner top-right"></div>
                 <div class="corner bottom-left"></div>
                 <div class="corner bottom-right"></div>
-                <span class="scan-label">Inquadra Lotto o Scadenza</span>
+                <span id="scan-target-label" class="scan-label">Inquadra il Codice Lotto</span>
               </div>
+              
               <div class="scanner-loading hidden" id="scanner-loader">
                 <div class="spinner"></div>
-                <span>Lettura testo OCR...</span>
+                <span id="scanner-loader-text">Lettura OCR Caratteri...</span>
               </div>
             </div>
 
@@ -158,7 +170,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
                   <circle cx="12" cy="13" r="4" />
                 </svg>
-                <span>Scatta e Leggi</span>
+                <span id="btn-capture-label">Scatta e Leggi Lotto</span>
               </button>
               <button id="btn-toggle-camera" class="btn btn-icon-only">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -170,18 +182,18 @@
 
           <!-- Campi Input: Lotto e Scadenza -->
           <div class="inputs-grid-2col">
-            <div class="input-group">
+            <div class="input-group" id="group-input-lot">
               <label for="input-lot-code">Lotto</label>
               <div class="input-wrapper">
-                <input type="text" id="input-lot-code" autocomplete="off" placeholder="Es. 152026">
+                <input type="text" id="input-lot-code" autocomplete="off" placeholder="Es. L2409B">
                 <button id="btn-clear-lot" class="btn-clear hidden">&times;</button>
               </div>
             </div>
 
-            <div class="input-group">
-              <label for="input-expiry-date">Scadenza</label>
+            <div class="input-group" id="group-input-expiry">
+              <label for="input-expiry-date">Scadenza (gg/mm/aaaa o mm/aaaa)</label>
               <div class="input-wrapper">
-                <input type="text" id="input-expiry-date" autocomplete="off" placeholder="Es. 08-10-26">
+                <input type="text" id="input-expiry-date" autocomplete="off" placeholder="Es. 15/09/2026">
                 <button id="btn-clear-expiry" class="btn-clear hidden">&times;</button>
               </div>
             </div>
@@ -216,7 +228,7 @@
             </svg>
           </div>
           <h2>Modulo Compilato con Successo!</h2>
-          <p>Tutti i lotti e le scadenze inseriti sono stati formattati nel modello aziendale Eurospin.</p>
+          <p>Tutti i lotti e le scadenze inseriti sono stati formattati nel modello aziendale.</p>
           
           <div class="summary-details">
             <div class="summary-row">
@@ -263,7 +275,7 @@
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
         </svg>
-        <p>Nessun foglio salvato in archivio. Inizia una compilazione per popolarel la memoria.</p>
+        <p>Nessun foglio salvato in archivio.</p>
       </div>
 
       <div id="history-list" class="history-list-container">
@@ -271,27 +283,70 @@
       </div>
     </section>
 
-    <!-- SCHEDA 3: IMPOSTAZIONI -->
+    <!-- SCHEDA 3: IMPOSTAZIONI, LOGO & EDITOR FORNITORI -->
     <section id="sec-settings" class="tab-content">
+      
+      <!-- SEZIONE 1: LOGO AZIENDALE PERSONALIZZATO -->
       <div class="card settings-card">
         <div class="card-header">
-          <h3>Informazioni Modelli Eurospin</h3>
-          <p>I modelli precaricati sono conformi all'istruzione operativa interna Rev.01 del 18/10/2016 per reparto Gastronomia Eurospin.</p>
+          <h3>Logo Aziendale Personalizzato</h3>
+          <p>Carica l'immagine del logo della tua azienda. Verrà inserito in alto a sinistra nel foglio A4 stampabile e in PDF.</p>
+        </div>
+
+        <div class="logo-upload-wrapper">
+          <div id="logo-preview-box" class="logo-preview-box">
+            <span id="logo-placeholder-text">Nessun logo caricato (Logo predefinito Eurospin)</span>
+            <img id="custom-logo-preview" class="custom-logo-img hidden" alt="Logo Personalizzato">
+          </div>
+          
+          <div class="logo-actions">
+            <label for="input-logo-file" class="btn btn-secondary btn-sm">
+              <span>Carica Foto Logo (.jpg / .png)</span>
+              <input type="file" id="input-logo-file" accept="image/*" class="hidden">
+            </label>
+            <button id="btn-remove-custom-logo" class="btn btn-danger-text hidden">Rimuovi Logo</button>
+          </div>
         </div>
       </div>
 
+      <!-- SEZIONE 2: EDITOR RICETTE E FORNITORI -->
+      <div class="card settings-card">
+        <div class="card-header">
+          <h3>Editor Ricette e Fornitori</h3>
+          <p>Modifica i fornitori di ciascun ingrediente quando cambia una fornitura, oppure aggiungi nuove preparazioni.</p>
+        </div>
+
+        <div class="input-group">
+          <label for="select-editor-module">Seleziona Modello da Modificare</label>
+          <div class="input-wrapper">
+            <select id="select-editor-module" class="select-input">
+              <option value="pizze">Modulo 1: Pizze</option>
+              <option value="gastronomia">Modulo 2: Gastronomia & Rosticceria</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="recipe-editor-container" class="recipe-editor-list" style="margin-top: 15px;">
+          <!-- Popolato dinamicamente via JS -->
+        </div>
+
+        <button id="btn-add-new-recipe" class="btn btn-secondary" style="margin-top: 15px;">+ Aggiungi Nuova Ricetta / Piatto</button>
+      </div>
+
+      <!-- DANGER ZONE -->
       <div class="card settings-card danger-zone">
         <div class="card-header">
-          <h3 class="text-danger">Gestione Dati</h3>
-          <p>Operazioni sul database locale offline.</p>
+          <h3 class="text-danger">Ripristino Dati</h3>
+          <p>Ripristina i modelli ufficiali e i fornitori originali.</p>
         </div>
         <div class="settings-actions">
+          <button id="btn-reset-models" class="btn btn-secondary">Ripristina Fornitori Predefiniti</button>
           <button id="btn-clear-all" class="btn btn-danger">Elimina Storico Registrazioni</button>
         </div>
       </div>
 
       <div class="settings-footer">
-        <p>Eurospin HACCP Gastronomia v2.0 &bull; Modulo 1 - Istr. N. 1</p>
+        <p>Eurospin HACCP Gastronomia v2.2 &bull; Modulo 1 - Istr. N. 1</p>
       </div>
     </section>
 
@@ -311,17 +366,19 @@
 
     <!-- FOGLIO A4 1:1 STAMPABILE EUROSPIN -->
     <div id="eurospin-paper-sheet" class="paper-sheet">
-      <!-- Intestazione Modello -->
+      <!-- Intestazione Modello con Logo Personalizzato o Predefinito -->
       <table class="paper-header-table">
         <tr>
-          <td class="logo-cell" style="width: 15%;">
-            <div class="eurospin-logo-box">
-              <span class="logo-top">★ EURO ★</span>
-              <span class="logo-bottom">Spin</span>
+          <td class="logo-cell" style="width: 20%;">
+            <div id="paper-logo-container">
+              <div class="eurospin-logo-box">
+                <span class="logo-top">★ EURO ★</span>
+                <span class="logo-bottom">Spin</span>
+              </div>
             </div>
             <div class="code-sub">Modulo 1 - Istr. N. 1</div>
           </td>
-          <td class="title-cell" style="width: 55%;">
+          <td class="title-cell" style="width: 50%;">
             <div class="main-title">ISTRUZIONE OPERATIVE INTERNE</div>
             <div class="sub-title">Modulo Scadenze e rintracciabilità gastronomie</div>
           </td>
@@ -332,24 +389,21 @@
         </tr>
       </table>
 
-      <!-- Riga Data -->
       <div class="paper-date-row">
         <span>Data <strong id="print-date-field">__/__/____</strong></span>
       </div>
 
-      <!-- Tabella Principale Dati -->
       <table class="paper-data-table" id="paper-data-table">
         <!-- Generato via JS -->
       </table>
 
-      <!-- Nota Piè di pagina -->
       <div class="paper-footer-note">
         Gli ingredienti con stesso lotto e scadenza utilizzati in più preparazioni sono contrassegnati con un asterisco
       </div>
     </div>
   </div>
 
-  <!-- Barra di Navigazione Inferiore (iOS style) -->
+  <!-- Barra di Navigazione Inferiore -->
   <nav class="app-navbar no-print">
     <button class="nav-item active" data-target="sec-wizard">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -368,14 +422,12 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
         <circle cx="12" cy="12" r="3" />
       </svg>
-      <span>Info</span>
+      <span>Impostazioni</span>
     </button>
   </nav>
 
   <!-- Script dell'Applicazione -->
   <script src="app.js"></script>
-  
-  <!-- Registrazione Service Worker per PWA -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
