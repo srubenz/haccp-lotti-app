@@ -130,11 +130,9 @@ db.version(1).stores({
   settings: 'key'
 });
 
-// Stato dei Modelli (caricati da DB o predefiniti)
 let activeModels = JSON.parse(JSON.stringify(DEFAULT_EUROSPIN_MODELS));
 let customCompanyLogo = null;
 
-// Stato della Sessione
 let currentSession = {
   moduleKey: null,
   selectedRecipes: [],
@@ -146,14 +144,11 @@ let currentSession = {
   resultsMap: {}
 };
 
-// Stato Scansione a 2 Passi ('lot' = Passo 1 Lotto, 'expiry' = Passo 2 Scadenza)
 let activeOcrMode = 'lot'; 
-
 let cameraStream = null;
 let activeFacingMode = 'environment';
 let ocrWorker = null;
 
-// --- INIZIALIZZAZIONE ---
 document.addEventListener('DOMContentLoaded', async () => {
   setupNavigation();
   await loadCustomSettingsAndModels();
@@ -176,7 +171,6 @@ function checkOnlineStatus() {
   }
 }
 
-// Caricamento impostazioni personalizzate da DB
 async function loadCustomSettingsAndModels() {
   try {
     const savedModels = await db.customModels.get('models');
@@ -193,7 +187,6 @@ async function loadCustomSettingsAndModels() {
   }
 }
 
-// --- NAVIGAZIONE SCHEDE ---
 function setupNavigation() {
   const navItems = document.querySelectorAll('.app-navbar .nav-item');
   const tabContents = document.querySelectorAll('.tab-content');
@@ -220,7 +213,6 @@ function setupNavigation() {
   });
 }
 
-// --- FASE 1: SELEZIONE MODULO ---
 function setupModuleSelection() {
   const moduleBtns = document.querySelectorAll('.module-card-btn');
   moduleBtns.forEach(btn => {
@@ -231,7 +223,6 @@ function setupModuleSelection() {
   });
 }
 
-// --- FASE 2: SELEZIONE RICETTE ---
 function startRecipeSelection(moduleKey) {
   currentSession.moduleKey = moduleKey;
   const model = activeModels[moduleKey];
@@ -249,11 +240,11 @@ function startRecipeSelection(moduleKey) {
     `;
     
     item.addEventListener('click', (e) => {
+      const chk = item.querySelector('input');
       if (e.target.tagName !== 'INPUT') {
-        const chk = item.querySelector('input');
         chk.checked = !chk.checked;
       }
-      item.classList.toggle('checked', item.querySelector('input').checked);
+      item.classList.toggle('checked', chk.checked);
     });
 
     listContainer.appendChild(item);
@@ -263,7 +254,6 @@ function startRecipeSelection(moduleKey) {
   document.getElementById('wizard-step-recipes').classList.remove('hidden');
 }
 
-// --- AVVIO WIZARD GUIDATO ---
 function startWizardScanning() {
   const checkboxes = document.querySelectorAll('#recipe-checkbox-list input[type="checkbox"]:checked');
   if (checkboxes.length === 0) {
@@ -296,7 +286,7 @@ function startWizardScanning() {
   document.getElementById('wizard-step-active').classList.remove('hidden');
 
   startSessionTimer();
-  setOcrMode('lot'); // Inizia sempre con Passo 1: Lotto
+  setOcrMode('lot');
   showCurrentWizardStep();
   startCamera();
 }
@@ -314,7 +304,6 @@ function startSessionTimer() {
   }, 1000);
 }
 
-// IMPOSTAZIONE MODALITÀ SCANNER A 2 PASSI (PASSO 1: LOTTO / PASSO 2: SCADENZA)
 function setOcrMode(mode) {
   activeOcrMode = mode;
   const indicator = document.getElementById('scan-step-indicator');
@@ -328,14 +317,14 @@ function setOcrMode(mode) {
     indicator.className = "scan-step-badge step-1";
     targetBox.className = "scan-target-box step-1-mode";
     targetLabel.textContent = "Inquadra il Codice Lotto";
-    captureLabel.textContent = "Scatta e Leggi Lotto";
+    captureLabel.textContent = "Scatta da Live";
     switchBtn.textContent = "Passa a Scadenza →";
   } else {
     indicator.textContent = "PASSO 2: Scansiona la Data di SCADENZA";
     indicator.className = "scan-step-badge step-2";
     targetBox.className = "scan-target-box step-2-mode";
     targetLabel.textContent = "Inquadra la Data di Scadenza";
-    captureLabel.textContent = "Scatta e Leggi Scadenza";
+    captureLabel.textContent = "Scatta da Live";
     switchBtn.textContent = "← Passa a Lotto";
   }
 }
@@ -344,7 +333,6 @@ function toggleOcrMode() {
   setOcrMode(activeOcrMode === 'lot' ? 'expiry' : 'lot');
 }
 
-// MOSTRA LO STEP CORRENTE
 function showCurrentWizardStep() {
   const step = currentSession.flatSteps[currentSession.currentIndex];
   
@@ -363,10 +351,8 @@ function showCurrentWizardStep() {
   document.getElementById('btn-clear-lot').classList.add('hidden');
   document.getElementById('btn-clear-expiry').classList.add('hidden');
 
-  // Ripristina la fotocamera sulla scansione Lotto per il nuovo ingrediente
   setOcrMode('lot');
 
-  // Banner Suggerimento Lotto Smart
   const existingMemory = currentSession.scannedLotsMemory[step.ingredientName];
   const smartBanner = document.getElementById('smart-reuse-banner');
   
@@ -468,17 +454,22 @@ function resetWizardToStart() {
 }
 
 
-// --- TELECAMERA & OCR AVANZATO CON PRE-PROCESSING PER TESTI PUNTINATI ---
+// --- TELECAMERA & OCR CON FALLBACK SCATTO FOTO ---
 async function startCamera() {
   stopCamera();
+  const notice = document.getElementById('camera-fallback-notice');
+  const video = document.getElementById('scanner-video');
+
   try {
     cameraStream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: activeFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
       audio: false
     });
-    document.getElementById('scanner-video').srcObject = cameraStream;
+    video.srcObject = cameraStream;
+    notice.classList.add('hidden');
   } catch (err) {
-    console.error("Errore avvio fotocamera:", err);
+    console.warn("Fotocamera live non disponibile (HTTP o permessi):", err);
+    notice.classList.remove('hidden');
   }
 }
 
@@ -496,34 +487,16 @@ function toggleCameraLens() {
 }
 
 async function captureAndRecognizeText() {
-  if (!cameraStream) return;
-  const video = document.getElementById('scanner-video');
-  const loader = document.getElementById('scanner-loader');
-  const loaderText = document.getElementById('scanner-loader-text');
-  
-  if (!ocrWorker) {
-    loaderText.textContent = "Inizializzazione OCR...";
-    loader.classList.remove('hidden');
-    // Whitelist per lotti e scadenze (lettere, numeri, slash e trattini)
-    ocrWorker = await Tesseract.createWorker('ita');
-    await ocrWorker.setParameters({
-      tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz./- '
-    });
+  if (!cameraStream) {
+    document.getElementById('input-ocr-file').click();
+    return;
   }
   
-  loaderText.textContent = activeOcrMode === 'lot' ? "Lettura Codice Lotto..." : "Lettura Data Scadenza...";
-  loader.classList.remove('hidden');
-
-  // Ritaglio di precisione 1:1 dell'area del mirino
-  const videoWidth = video.videoWidth;
-  const videoHeight = video.videoHeight;
-  const cssWidth = video.clientWidth;
-  const cssHeight = video.clientHeight;
-
-  const cropWidth = videoWidth * 0.85;
-  const cropHeight = videoHeight * 0.28;
-  const cropX = (videoWidth - cropWidth) / 2;
-  const cropY = (videoHeight - cropHeight) / 2;
+  const video = document.getElementById('scanner-video');
+  const cropWidth = video.videoWidth * 0.85;
+  const cropHeight = video.videoHeight * 0.28;
+  const cropX = (video.videoWidth - cropWidth) / 2;
+  const cropY = (video.videoHeight - cropHeight) / 2;
 
   const cropCanvas = document.createElement('canvas');
   cropCanvas.width = cropWidth;
@@ -531,29 +504,65 @@ async function captureAndRecognizeText() {
   const ctx = cropCanvas.getContext('2d');
 
   ctx.drawImage(video, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+  processCanvasAndRecognize(cropCanvas);
+}
 
-  // ALGORITMO DI PRE-PROCESSING PER TESTI PUNTINATI (DOT-MATRIX)
-  // Applica una dilatazione dei pixel bianchi/neri per connettere i punti a matrice d'inchiostro
-  const imgData = ctx.getImageData(0, 0, cropWidth, cropHeight);
+function handleFilePhotoCapture(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      processCanvasAndRecognize(canvas);
+    };
+    img.src = evt.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// PRE-PROCESSING E OCR SMART (ESTRAE SIA LOTTO CHE SCADENZA SE PRESENTI ENTRAMBI)
+async function processCanvasAndRecognize(canvas) {
+  const loader = document.getElementById('scanner-loader');
+  const loaderText = document.getElementById('scanner-loader-text');
+  
+  if (!ocrWorker) {
+    loaderText.textContent = "Inizializzazione OCR...";
+    loader.classList.remove('hidden');
+    ocrWorker = await Tesseract.createWorker('ita');
+    await ocrWorker.setParameters({
+      tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz./- '
+    });
+  }
+
+  loaderText.textContent = activeOcrMode === 'lot' ? "Lettura Codice Lotto..." : "Lettura Data Scadenza...";
+  loader.classList.remove('hidden');
+
+  const ctx = canvas.getContext('2d');
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const data = imgData.data;
 
-  // 1. Grayscale & Contrast enhancement
   for (let i = 0; i < data.length; i += 4) {
     const gray = 0.3 * data[i] + 0.59 * data[i + 1] + 0.11 * data[i + 2];
     const val = (gray > 115) ? 255 : 0;
     data[i] = val; data[i + 1] = val; data[i + 2] = val;
   }
 
-  // 2. Dilatazione dei pixel (Morphological Dilation) per unire le righe di punti sgranati
-  const w = cropWidth;
-  const h = cropHeight;
+  // Dilatazione pixel per caratteri puntinati
+  const w = canvas.width;
+  const h = canvas.height;
   const copy = new Uint8ClampedArray(data);
 
   for (let y = 1; y < h - 1; y++) {
     for (let x = 1; x < w - 1; x++) {
       const idx = (y * w + x) * 4;
-      if (copy[idx] === 0) { // Se è un pixel nero di testo
-        // Espande il nero sui 4 pixel adiacenti per unire i pallini della matrice
+      if (copy[idx] === 0) {
         data[((y - 1) * w + x) * 4] = 0;
         data[((y + 1) * w + x) * 4] = 0;
         data[(y * w + (x - 1)) * 4] = 0;
@@ -563,8 +572,7 @@ async function captureAndRecognizeText() {
   }
 
   ctx.putImageData(imgData, 0, 0);
-
-  const dataUrl = cropCanvas.toDataURL('image/jpeg', 0.95);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
 
   const targetBox = document.getElementById('scan-target-box');
   targetBox.classList.add('success');
@@ -575,26 +583,34 @@ async function captureAndRecognizeText() {
     const rawText = result.data.text;
     console.log("OCR Raw Text:", rawText);
 
-    if (activeOcrMode === 'lot') {
-      // Estrazione Lotto Alfanumerico
-      const lot = parseLotCode(rawText);
-      if (lot !== "") {
-        document.getElementById('input-lot-code').value = lot;
-        document.getElementById('btn-clear-lot').classList.remove('hidden');
-        // Passa automaticamente al Passo 2 (Scadenza) dopo la lettura del lotto!
-        setOcrMode('expiry');
-      } else {
-        alert("Codice Lotto non rilevato. Avvicina la confezione o inseriscilo manualmente.");
-      }
-    } else {
-      // Estrazione Data di Scadenza (gg/mm/aaaa o mm/aaaa)
-      const expiry = parseExpiryDate(rawText);
-      if (expiry !== "") {
-        document.getElementById('input-expiry-date').value = expiry;
-        document.getElementById('btn-clear-expiry').classList.remove('hidden');
-      } else {
-        alert("Data di Scadenza non rilevata (formati validi: gg/mm/aaaa o mm/aaaa). Prova di nuovo o digitala manualmente.");
-      }
+    // Tentiamo di estrarre sia la scadenza che il lotto dal testo acquisito
+    const detectedExpiry = parseExpiryDate(rawText);
+    const detectedLot = parseLotCode(rawText);
+
+    const inputLot = document.getElementById('input-lot-code');
+    const inputExp = document.getElementById('input-expiry-date');
+
+    let lotFilled = false;
+    let expFilled = false;
+
+    if (detectedLot !== "") {
+      inputLot.value = detectedLot;
+      document.getElementById('btn-clear-lot').classList.remove('hidden');
+      lotFilled = true;
+    }
+
+    if (detectedExpiry !== "") {
+      inputExp.value = detectedExpiry;
+      document.getElementById('btn-clear-expiry').classList.remove('hidden');
+      expFilled = true;
+    }
+
+    if (activeOcrMode === 'lot' && lotFilled) {
+      setOcrMode('expiry');
+    }
+
+    if (!lotFilled && !expFilled) {
+      alert("Nessun lotto o scadenza leggibile nell'area inquadrata. Scatta da più vicino o digitali manualmente.");
     }
   } catch (err) {
     console.error("Errore OCR:", err);
@@ -603,7 +619,6 @@ async function captureAndRecognizeText() {
   }
 }
 
-// PARSER REGEX PER LOTTI
 function parseLotCode(text) {
   if (!text) return "";
   let clean = text.replace(/[\r\n]+/g, ' ').trim();
@@ -613,14 +628,10 @@ function parseLotCode(text) {
   return parts.length > 0 ? parts[0].substring(0, 18) : "";
 }
 
-// PARSER REGEX PER DATE DI SCADENZA (gg/mm/aaaa o mm/aaaa)
 function parseExpiryDate(text) {
   if (!text) return "";
-  
-  // Cerca pattern gg/mm/aaaa o gg-mm-aaaa o gg.mm.aaaa
   const fullDateRegex = /\b([0-3]?[0-9][/\.-][0-1]?[0-9][/\.-]20\d{2})\b/;
   const shortYearRegex = /\b([0-3]?[0-9][/\.-][0-1]?[0-9][/\.-]\d{2})\b/;
-  // Cerca pattern mm/aaaa (es. 09/2026 o 09/26)
   const monthYearRegex = /\b([0-1]?[0-9][/\.-]20\d{2})\b/;
 
   let match = text.match(fullDateRegex);
@@ -686,7 +697,7 @@ function updateLogoUI(logoBase64) {
 }
 
 
-// --- EDITOR RICETTE E FORNITORI NELLE IMPOSTAZIONI ---
+// --- EDITOR RICETTE E FORNITORI ---
 function renderRecipeEditorUI() {
   const selectModule = document.getElementById('select-editor-module');
   const moduleKey = selectModule.value;
@@ -723,7 +734,6 @@ function renderRecipeEditorUI() {
     container.appendChild(card);
   });
 
-  // Eventi per il salvataggio automatico delle modifiche ai fornitori
   container.querySelectorAll('input').forEach(inp => {
     inp.addEventListener('change', saveEditorChanges);
   });
@@ -795,7 +805,6 @@ function renderEurospinPaperSheet(sessionData) {
 
   document.getElementById('print-date-field').textContent = sessionData.date || formatDate(new Date());
   
-  // Header Logo: usa logo personalizzato se presente, altrimenti box Eurospin
   const logoContainer = document.getElementById('paper-logo-container');
   if (customCompanyLogo) {
     logoContainer.innerHTML = `<img src="${customCompanyLogo}" class="paper-logo-img" alt="Logo Aziendale">`;
@@ -827,8 +836,9 @@ function renderEurospinPaperSheet(sessionData) {
 
   let tbodyHTML = '';
 
-  model.recipes.forEach((recipe) => {
-    const isPreparedToday = sessionData.selectedRecipes ? sessionData.selectedRecipes.includes(model.recipes.indexOf(recipe)) : true;
+  // CORREZIONE BUG FONDAMENTALE: aggiunta di rIndex nel ciclo per la corretta associazione delle ricette selezionate
+  model.recipes.forEach((recipe, rIndex) => {
+    const isPreparedToday = sessionData.selectedRecipes ? sessionData.selectedRecipes.includes(rIndex) : true;
     const ingCount = recipe.ingredients.length;
 
     recipe.ingredients.forEach((ing, iIndex) => {
@@ -882,8 +892,8 @@ function exportSessionToExcel(sessionData) {
 
   rows.push(["Prodotto / Ricetta", "Ingrediente", "Fornitore", "Lotto", "Scadenza"]);
 
-  model.recipes.forEach(recipe => {
-    const isPreparedToday = sessionData.selectedRecipes ? sessionData.selectedRecipes.includes(model.recipes.indexOf(recipe)) : true;
+  model.recipes.forEach((recipe, rIndex) => {
+    const isPreparedToday = sessionData.selectedRecipes ? sessionData.selectedRecipes.includes(rIndex) : true;
     
     recipe.ingredients.forEach(ing => {
       const stepKey = `${recipe.name}_${ing.name}`;
@@ -911,7 +921,7 @@ function exportSessionToExcel(sessionData) {
 }
 
 
-// --- SETUP EVENTI GLOBALI ---
+// --- EVENT LISTENERS GLOBALI ---
 function setupEventListeners() {
   document.getElementById('btn-start-scanning').addEventListener('click', startWizardScanning);
   document.getElementById('btn-back-to-modules').addEventListener('click', () => {
@@ -940,6 +950,11 @@ function setupEventListeners() {
   document.getElementById('btn-restart-wizard').addEventListener('click', resetWizardToStart);
 
   document.getElementById('btn-capture').addEventListener('click', captureAndRecognizeText);
+  document.getElementById('btn-file-capture').addEventListener('click', () => {
+    document.getElementById('input-ocr-file').click();
+  });
+  document.getElementById('input-ocr-file').addEventListener('change', handleFilePhotoCapture);
+
   document.getElementById('btn-toggle-camera').addEventListener('click', toggleCameraLens);
 
   document.getElementById('btn-open-print-preview').addEventListener('click', openPrintPreviewModal);

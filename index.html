@@ -137,9 +137,8 @@
             <button id="btn-apply-smart-reuse" class="btn btn-secondary btn-sm">Usa Questo Lotto</button>
           </div>
 
-          <!-- SCANNER FOTOCAMERA GUIDATO A 2 PASSI -->
+          <!-- SCANNER FOTOCAMERA GUIDATO A 2 PASSI + FALLBACK FOTO -->
           <div class="scanner-container">
-            <!-- Badge di guida visiva (Passo 1: Lotto / Passo 2: Scadenza) -->
             <div class="scan-step-header">
               <span id="scan-step-indicator" class="scan-step-badge step-1">PASSO 1: Scansiona il Codice LOTTO</span>
               <button id="btn-switch-ocr-mode" class="btn-text-action" style="font-size: 11px;">Passa a Scadenza →</button>
@@ -149,7 +148,16 @@
               <video id="scanner-video" autoplay playsinline muted></video>
               <canvas id="scanner-overlay" class="hidden"></canvas>
               
-              <!-- Mirino Dinamico (Cambia colore tra Blu Lotto e Verde Scadenza) -->
+              <!-- Messaggio Fallback per Connessioni HTTP / PC senza Webcam -->
+              <div id="camera-fallback-notice" class="camera-fallback-notice hidden">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                </svg>
+                <span>Fotocamera live non disponibile su questa connessione HTTP.</span>
+                <small>Usa il pulsante sotto per scattare una foto direttamente o selezionare un'immagine.</small>
+              </div>
+
+              <!-- Mirino Dinamico -->
               <div id="scan-target-box" class="scan-target-box step-1-mode">
                 <div class="corner top-left"></div>
                 <div class="corner top-right"></div>
@@ -160,18 +168,29 @@
               
               <div class="scanner-loading hidden" id="scanner-loader">
                 <div class="spinner"></div>
-                <span id="scanner-loader-text">Lettura OCR Caratteri...</span>
+                <span id="scanner-loader-text">Elaborazione Immagine (OCR)...</span>
               </div>
             </div>
 
-            <div class="scanner-controls">
+            <!-- CONTROLLI SCANNER & PULSANTE SCATTA FOTO NATIVA -->
+            <div class="scanner-controls-grid">
               <button id="btn-capture" class="btn btn-secondary">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
                   <circle cx="12" cy="13" r="4" />
                 </svg>
-                <span id="btn-capture-label">Scatta e Leggi Lotto</span>
+                <span id="btn-capture-label">Scatta da Live</span>
               </button>
+
+              <button id="btn-file-capture" class="btn btn-secondary" style="background-color: var(--bg-tertiary);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                </svg>
+                <span>Scatta Foto / Galleria</span>
+              </button>
+
+              <input type="file" id="input-ocr-file" accept="image/*" capture="environment" class="hidden">
+
               <button id="btn-toggle-camera" class="btn btn-icon-only">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
@@ -207,7 +226,7 @@
             <button id="btn-confirm-next" class="btn btn-primary">
               <span>Conferma e Avanti</span>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7M5 5l7 7-7 7" />
               </svg>
             </button>
           </div>
@@ -264,7 +283,7 @@
       </div>
     </section>
 
-    <!-- SCHEDA 2: STORICO DELLE COMPILAZIONI -->
+    <!-- SCHEDA 2: STORICO -->
     <section id="sec-history" class="tab-content">
       <div class="section-title-wrapper">
         <h2>Storico Fogli Compilati</h2>
@@ -283,14 +302,12 @@
       </div>
     </section>
 
-    <!-- SCHEDA 3: IMPOSTAZIONI, LOGO & EDITOR FORNITORI -->
+    <!-- SCHEDA 3: IMPOSTAZIONI -->
     <section id="sec-settings" class="tab-content">
-      
-      <!-- SEZIONE 1: LOGO AZIENDALE PERSONALIZZATO -->
       <div class="card settings-card">
         <div class="card-header">
           <h3>Logo Aziendale Personalizzato</h3>
-          <p>Carica l'immagine del logo della tua azienda. Verrà inserito in alto a sinistra nel foglio A4 stampabile e in PDF.</p>
+          <p>Carica l'immagine del logo della tua azienda per il foglio stampabile A4 e PDF.</p>
         </div>
 
         <div class="logo-upload-wrapper">
@@ -309,11 +326,10 @@
         </div>
       </div>
 
-      <!-- SEZIONE 2: EDITOR RICETTE E FORNITORI -->
       <div class="card settings-card">
         <div class="card-header">
           <h3>Editor Ricette e Fornitori</h3>
-          <p>Modifica i fornitori di ciascun ingrediente quando cambia una fornitura, oppure aggiungi nuove preparazioni.</p>
+          <p>Modifica i fornitori di ciascun ingrediente o aggiungi nuove preparazioni.</p>
         </div>
 
         <div class="input-group">
@@ -327,13 +343,12 @@
         </div>
 
         <div id="recipe-editor-container" class="recipe-editor-list" style="margin-top: 15px;">
-          <!-- Popolato dinamicamente via JS -->
+          <!-- Popolato via JS -->
         </div>
 
         <button id="btn-add-new-recipe" class="btn btn-secondary" style="margin-top: 15px;">+ Aggiungi Nuova Ricetta / Piatto</button>
       </div>
 
-      <!-- DANGER ZONE -->
       <div class="card settings-card danger-zone">
         <div class="card-header">
           <h3 class="text-danger">Ripristino Dati</h3>
@@ -346,13 +361,13 @@
       </div>
 
       <div class="settings-footer">
-        <p>Eurospin HACCP Gastronomia v2.2 &bull; Modulo 1 - Istr. N. 1</p>
+        <p>Eurospin HACCP Gastronomia v2.3 &bull; Modulo 1 - Istr. N. 1</p>
       </div>
     </section>
 
   </main>
 
-  <!-- MODALE VISTA DI STAMPA 1:1 (FOGLIO UFFICIALE EUROSPIN) -->
+  <!-- MODALE VISTA DI STAMPA 1:1 -->
   <div id="print-modal" class="print-modal-overlay hidden">
     <div class="print-modal-toolbar no-print">
       <button id="btn-close-print-modal" class="btn btn-neutral">Chiudi</button>
@@ -366,7 +381,6 @@
 
     <!-- FOGLIO A4 1:1 STAMPABILE EUROSPIN -->
     <div id="eurospin-paper-sheet" class="paper-sheet">
-      <!-- Intestazione Modello con Logo Personalizzato o Predefinito -->
       <table class="paper-header-table">
         <tr>
           <td class="logo-cell" style="width: 20%;">

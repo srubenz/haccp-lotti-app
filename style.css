@@ -32,147 +32,33 @@
   --safe-top: env(safe-area-inset-top, 0px);
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  -webkit-tap-highlight-color: transparent;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
-body {
-  font-family: var(--font-family);
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
-}
+body { font-family: var(--font-family); background-color: var(--bg-primary); color: var(--text-primary); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
 
-/* --- HEADER & BRAND --- */
-.app-header {
-  background-color: var(--glass-bg);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--glass-border);
-  padding: calc(12px + var(--safe-top)) 20px 12px 20px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
+.app-header { background-color: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid var(--glass-border); padding: calc(12px + var(--safe-top)) 20px 12px 20px; position: sticky; top: 0; z-index: 100; }
+.header-content { display: flex; justify-content: space-between; align-items: center; max-width: 600px; margin: 0 auto; }
+.brand-wrapper { display: flex; align-items: center; gap: 10px; }
+.header-app-logo { width: 32px; height: 32px; border-radius: 8px; object-fit: cover; border: 1px solid var(--glass-border); }
+.app-header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.brand-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.header-app-logo {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  object-fit: cover;
-  border: 1px solid var(--glass-border);
-}
-
-.app-header h1 {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
-  background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.status-indicator {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  padding: 4px 8px;
-  border-radius: 20px;
-}
-
+.status-indicator { font-size: 11px; font-weight: 600; text-transform: uppercase; padding: 4px 8px; border-radius: 20px; }
 .status-indicator.online { background-color: var(--color-success-bg); color: var(--color-success); }
 .status-indicator.offline { background-color: var(--color-danger-bg); color: var(--color-danger); }
 
-.app-content {
-  flex: 1;
-  padding: 20px;
-  max-width: 600px;
-  width: 100%;
-  margin: 0 auto;
-  padding-bottom: calc(90px + var(--safe-bottom));
-}
-
+.app-content { flex: 1; padding: 20px; max-width: 600px; width: 100%; margin: 0 auto; padding-bottom: calc(90px + var(--safe-bottom)); }
 .tab-content { display: none; animation: fadeIn 0.3s ease; }
 .tab-content.active { display: block; }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-/* --- CARTE & PULSANTI --- */
-.card {
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: var(--shadow-lg);
-}
+.card { background-color: var(--bg-secondary); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow-lg); }
+.card.empty-state { text-align: center; padding: 30px 20px; display: flex; flex-direction: column; align-items: center; gap: 15px; }
 
-.card.empty-state {
-  text-align: center;
-  padding: 30px 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 15px;
-}
+.icon-bubble { width: 70px; height: 70px; border-radius: 50%; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; color: var(--accent-color); }
+.icon-bubble.success { color: var(--color-success); background: var(--color-success-bg); }
 
-.icon-bubble {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--glass-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--accent-color);
-}
-
-.icon-bubble.success {
-  color: var(--color-success);
-  background: var(--color-success-bg);
-}
-
-.btn {
-  font-family: var(--font-family);
-  font-size: 15px;
-  font-weight: 600;
-  padding: 12px 20px;
-  border-radius: var(--radius-md);
-  border: none;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: all 0.2s ease;
-  width: 100%;
-}
-
+.btn { font-family: var(--font-family); font-size: 15px; font-weight: 600; padding: 12px 20px; border-radius: var(--radius-md); border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease; width: 100%; }
 .btn-primary { background-color: var(--accent-color); color: #fff; box-shadow: 0 4px 15px var(--accent-glow); }
 .btn-secondary { background-color: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--glass-border); }
 .btn-neutral { background-color: rgba(255, 255, 255, 0.05); color: var(--text-secondary); border: 1px solid var(--glass-border); }
@@ -183,7 +69,6 @@ body {
 .btn-sm { padding: 8px 12px; font-size: 13px; }
 .btn-icon-only { width: 48px; height: 48px; border-radius: var(--radius-md); background-color: var(--bg-tertiary); border: 1px solid var(--glass-border); color: var(--text-primary); display: flex; align-items: center; justify-content: center; }
 
-/* SELEZIONE MODULO & RICETTE */
 .module-selection-grid { display: flex; flex-direction: column; gap: 15px; width: 100%; margin-top: 10px; }
 .module-card-btn { background-color: var(--bg-tertiary); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 16px; display: flex; align-items: center; gap: 15px; cursor: pointer; text-align: left; transition: transform 0.2s ease, border-color 0.2s ease; }
 .module-card-btn:active { transform: scale(0.98); border-color: var(--accent-color); }
@@ -198,7 +83,6 @@ body {
 .recipe-checkbox-item label { font-size: 15px; font-weight: 600; color: var(--text-primary); cursor: pointer; flex: 1; }
 .recipe-checkbox-item input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent-color); }
 
-/* WIZARD & SMART BANNER */
 .wizard-progress-bar { background-color: var(--bg-secondary); height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 12px; border: 1px solid var(--glass-border); }
 .progress-fill { background: linear-gradient(90deg, var(--accent-color) 0%, #85a5ff 100%); height: 100%; border-radius: 3px; transition: width 0.3s ease; }
 .wizard-step-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
@@ -218,71 +102,41 @@ body {
 .smart-banner-content { flex: 1; display: flex; flex-direction: column; font-size: 12px; color: var(--text-primary); }
 .smart-banner-content strong { color: var(--color-warning); font-size: 13px; margin-top: 2px; }
 
-/* --- SCANNER FOTOCAMERA GUIDATO A 2 PASSI (PASSO 1: LOTTO / PASSO 2: SCADENZA) --- */
-.scan-step-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-}
-
-.scan-step-badge {
-  font-size: 12px;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  transition: all 0.3s ease;
-}
-
-.scan-step-badge.step-1 {
-  background-color: var(--accent-glow);
-  color: var(--accent-color);
-  border: 1px solid rgba(10, 132, 255, 0.4);
-}
-
-.scan-step-badge.step-2 {
-  background-color: var(--color-success-bg);
-  color: var(--color-success);
-  border: 1px solid rgba(48, 209, 88, 0.4);
-}
+/* SCANNER FOTOCAMERA GUIDATO & FALLBACK NOTICE */
+.scan-step-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.scan-step-badge { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+.scan-step-badge.step-1 { background-color: var(--accent-glow); color: var(--accent-color); border: 1px solid rgba(10, 132, 255, 0.4); }
+.scan-step-badge.step-2 { background-color: var(--color-success-bg); color: var(--color-success); border: 1px solid rgba(48, 209, 88, 0.4); }
 
 .scanner-container { display: flex; flex-direction: column; gap: 10px; margin: 10px 0 15px 0; }
 .video-wrapper { position: relative; width: 100%; aspect-ratio: 4 / 3; border-radius: var(--radius-md); overflow: hidden; background-color: #000; border: 1px solid var(--glass-border); }
 #scanner-video { width: 100%; height: 100%; object-fit: cover; }
 #scanner-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
 
-.scan-target-box {
+.camera-fallback-notice {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 85%;
-  height: 28%;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.65);
-  z-index: 10;
-  border-radius: 6px;
-  pointer-events: none;
-  transition: border-color 0.3s ease;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: var(--bg-tertiary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  text-align: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  z-index: 8;
 }
 
-/* Mirino Passo 1 (Lotto - Blu) */
-.scan-target-box.step-1-mode {
-  border: 2px dashed var(--accent-color);
-}
+.camera-fallback-notice span { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.camera-fallback-notice small { font-size: 11px; color: var(--text-muted); }
+
+.scan-target-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; height: 28%; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.65); z-index: 10; border-radius: 6px; pointer-events: none; }
+.scan-target-box.step-1-mode { border: 2px dashed var(--accent-color); }
 .scan-target-box.step-1-mode .corner { border-color: var(--accent-color); }
-
-/* Mirino Passo 2 (Scadenza - Verde) */
-.scan-target-box.step-2-mode {
-  border: 2px dashed var(--color-success);
-}
+.scan-target-box.step-2-mode { border: 2px dashed var(--color-success); }
 .scan-target-box.step-2-mode .corner { border-color: var(--color-success); }
-
-.scan-target-box.success {
-  border-color: #ffffff;
-  border-style: solid;
-}
+.scan-target-box.success { border-color: #ffffff; border-style: solid; }
 
 .corner { position: absolute; width: 14px; height: 14px; }
 .corner.top-left { top: -2px; left: -2px; border-right: none; border-bottom: none; }
@@ -295,7 +149,11 @@ body {
 .spinner { width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent-color); border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.scanner-controls { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+.scanner-controls-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+}
 
 /* INPUTS GRID LOTTO E SCADENZA */
 .inputs-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
@@ -324,95 +182,21 @@ body {
 .btn-text-action.export { color: var(--accent-color); }
 .btn-text-action.delete { color: var(--color-danger); }
 
-/* --- UPLOAD LOGO PERSONALIZZATO NELLE IMPOSTAZIONI --- */
-.logo-upload-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 10px;
-}
+/* UPLOAD LOGO */
+.logo-upload-wrapper { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+.logo-preview-box { background-color: var(--bg-tertiary); border: 1px dashed var(--glass-border); border-radius: var(--radius-md); padding: 15px; display: flex; align-items: center; justify-content: center; min-height: 80px; text-align: center; }
+#logo-placeholder-text { font-size: 13px; color: var(--text-secondary); }
+.custom-logo-img { max-height: 60px; max-width: 180px; object-fit: contain; }
+.logo-actions { display: flex; justify-content: space-between; align-items: center; }
 
-.logo-preview-box {
-  background-color: var(--bg-tertiary);
-  border: 1px dashed var(--glass-border);
-  border-radius: var(--radius-md);
-  padding: 15px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 80px;
-  text-align: center;
-}
-
-#logo-placeholder-text {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.custom-logo-img {
-  max-height: 60px;
-  max-width: 180px;
-  object-fit: contain;
-}
-
-.logo-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-/* --- EDITOR RICETTE E FORNITORI --- */
-.recipe-editor-list {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.editor-recipe-card {
-  background-color: var(--bg-tertiary);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
-  padding: 15px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.editor-recipe-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--glass-border);
-  padding-bottom: 8px;
-}
-
-.editor-recipe-header h4 {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.editor-ingredient-row {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr auto;
-  gap: 8px;
-  align-items: center;
-}
-
-.editor-ingredient-row input {
-  font-family: var(--font-family);
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--glass-border);
-  color: var(--text-primary);
-  padding: 8px 10px;
-  font-size: 13px;
-  border-radius: var(--radius-sm);
-  outline: none;
-}
-
-.editor-ingredient-row input:focus {
-  border-color: var(--accent-color);
-}
+/* EDITOR RICETTE E FORNITORI */
+.recipe-editor-list { display: flex; flex-direction: column; gap: 15px; }
+.editor-recipe-card { background-color: var(--bg-tertiary); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+.editor-recipe-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px; }
+.editor-recipe-header h4 { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+.editor-ingredient-row { display: grid; grid-template-columns: 1.2fr 1fr auto; gap: 8px; align-items: center; }
+.editor-ingredient-row input { font-family: var(--font-family); background-color: var(--bg-secondary); border: 1px solid var(--glass-border); color: var(--text-primary); padding: 8px 10px; font-size: 13px; border-radius: var(--radius-sm); outline: none; }
+.editor-ingredient-row input:focus { border-color: var(--accent-color); }
 
 /* NAVBAR */
 .app-navbar { position: fixed; bottom: 0; left: 0; right: 0; background-color: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--glass-border); display: flex; justify-content: space-around; padding: 10px 10px calc(8px + var(--safe-bottom)) 10px; z-index: 100; }
@@ -421,40 +205,31 @@ body {
 
 .hidden { display: none !important; }
 
-/* MODALE VISTA DI STAMPA 1:1 */
+/* MODALE STAMPA 1:1 */
 .print-modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.9); z-index: 1000; display: flex; flex-direction: column; overflow-y: auto; }
 .print-modal-toolbar { position: sticky; top: 0; background-color: #131a26; border-bottom: 1px solid var(--glass-border); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 1010; }
-
 .paper-sheet { background-color: #ffffff; color: #000000; width: 210mm; min-height: 297mm; margin: 20px auto; padding: 15mm; font-family: Arial, Helvetica, sans-serif; box-shadow: 0 0 20px rgba(0, 0, 0, 0.5); box-sizing: border-box; }
-
 .paper-header-table { width: 100%; border-collapse: collapse; border: 1px solid #000; }
 .paper-header-table td { border: 1px solid #000; text-align: center; padding: 6px 4px; vertical-align: middle; }
-
 .paper-logo-img { max-height: 45px; max-width: 140px; object-fit: contain; }
-
 .eurospin-logo-box { border: 1px solid #000; display: inline-block; padding: 2px 6px; font-weight: bold; font-size: 11px; }
 .logo-top { display: block; font-size: 9px; }
 .logo-bottom { display: block; font-size: 13px; font-style: italic; }
 .code-sub { font-size: 9px; margin-top: 4px; }
-
 .main-title { font-weight: bold; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
 .sub-title { font-size: 11px; margin-top: 2px; }
 .info-cell { font-size: 10px; line-height: 1.4; text-align: center !important; }
-
 .paper-date-row { margin-top: 10px; margin-bottom: 10px; font-size: 13px; font-weight: bold; }
 .paper-data-table { width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 11px; }
 .paper-data-table th, .paper-data-table td { border: 1px solid #000; padding: 5px 6px; vertical-align: middle; }
 .paper-data-table th { background-color: #f0f0f0; font-weight: bold; text-align: center; }
-
 .cell-recipe { font-weight: bold; font-size: 11px; vertical-align: top; background-color: #fafafa; }
 .cell-product { font-weight: normal; }
 .cell-supplier { font-weight: normal; }
 .cell-lot { font-family: 'Courier New', Courier, monospace; font-weight: bold; text-align: center; font-size: 12px; }
 .cell-expiry { text-align: center; font-size: 11px; }
-
 .paper-footer-note { margin-top: 15px; font-size: 10px; font-style: italic; text-align: center; }
 
-/* MEDIA PRINT */
 @media print {
   body { background-color: #ffffff !important; color: #000000 !important; }
   .no-print { display: none !important; }
