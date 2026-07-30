@@ -1,0 +1,16 @@
+{
+  "short_name": "Lotti HACCP",
+  "name": "Registrazione Lotti HACCP",
+  "icons": [
+    {
+      "src": "icon.jpg",
+      "type": "image/jpeg",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "index.html",
+  "background_color": "#121212",
+  "theme_color": "#0A84FF",
+  "display": "standalone",
+  "orientation": "portrait"
+}
