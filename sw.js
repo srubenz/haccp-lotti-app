@@ -1,4 +1,4 @@
-const CACHE_NAME = 'haccp-lotti-v1';
+const CACHE_NAME = 'haccp-lotti-v2';
 const ASSETS_TO_CACHE = [
   'index.html',
   'style.css',
@@ -7,24 +7,24 @@ const ASSETS_TO_CACHE = [
   'icon.jpg'
 ];
 
-// Installazione Service Worker - Pre-cache dei file locali di base
+// Installazione Service Worker
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] Pre-caching core assets');
+      console.log('[Service Worker v2] Pre-caching core assets');
       return cache.addAll(ASSETS_TO_CACHE);
     }).then(() => self.skipWaiting())
   );
 });
 
-// Attivazione Service Worker - Pulizia vecchi cache
+// Attivazione Service Worker - Elimina immediatamente i vecchi cache v1
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('[Service Worker] Deleting old cache:', cacheName);
+            console.log('[Service Worker v2] Eliminazione vecchio cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -33,37 +33,29 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Intercettazione richieste di rete - Strategia Cache-First con salvataggio dinamico
+// Intercettazione richieste
 self.addEventListener('fetch', (event) => {
-  // Ignoriamo richieste non GET (es. POST)
   if (event.request.method !== 'GET') return;
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
-        // Se la risorsa è in cache, la restituiamo (velocità e offline)
         return cachedResponse;
       }
 
-      // Altrimenti la scarichiamo dalla rete
       return fetch(event.request).then((networkResponse) => {
-        // Verifichiamo se la risposta è valida
         if (!networkResponse || networkResponse.status !== 200 || networkResponse.type === 'error') {
           return networkResponse;
         }
 
-        // Cloniamo la risposta per salvarla in cache
         const responseToCache = networkResponse.clone();
         caches.open(CACHE_NAME).then((cache) => {
-          // Salviamo in cache tutti i file JS, WASM e assets di terze parti (Tesseract, SheetJS, ecc.)
-          // Questo assicura che al primo avvio online vengano scaricati e poi rimangano sempre offline
           cache.put(event.request, responseToCache);
         });
 
         return networkResponse;
       }).catch((err) => {
-        console.error('[Service Worker] Fetch failed offline:', err);
-        // Se siamo offline e non c'è in cache, fallisce silenziosamente
+        console.error('[Service Worker] Offline fetch failed:', err);
       });
     })
   );
