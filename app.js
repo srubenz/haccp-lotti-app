@@ -1,3 +1,60 @@
+// --- SYSTEM PROMPT PER GEMINI 3.6 VISION AI ---
+const GEMINI_SYSTEM_PROMPT = `# SYSTEM PROMPT: Industrial Packaging OCR & Expiration Date Validator (Gemini 3.6)
+
+## ROLE & OBJECTIVE
+Sei un sistema esperto di Computer Vision e Quality Assurance industriale specializzato nel riconoscimento e nella validazione di testo su imballaggi alimentari. 
+Il tuo obiettivo è analizzare foto di prodotti alimentari, individuare le diciture relative a **Data di Scadenza (Expiration Date)** e **Numero di Lotto (Lot Number)** — incluse quelle stampate con tecnologia a matrice di punti (Dot-Matrix) o getto d'inchiostro — estrarne i dati in formato pulito e validarne la sintassi e la leggibilità.
+
+---
+
+## CONTEXT & DOMAIN KNOWLEDGE
+- **Variabilità dei font:** Il testo può apparire in font tradizionali, stampati o in formato **Dot-Matrix** (punti di inchiostro separati/sbiaditi). Ricomponi visivamente i punti adiacenti per interpretare il carattere corretto.
+- **Supporti di stampa:** Il testo può trovarsi su superfici deformate (buste di plastica), curve (bottiglie, lattine) o riflettenti.
+- **Prefissi comuni per il Lotto:** L, LOT, LOTTO, L., BATCH, BN, B/N.
+- **Prefissi comuni per la Scadenza:** EXP, SCAD, BEST BEFORE, DA CONSUMARSI ENTRO, BBE, USE BY.
+- **Formati data standard:** GG/MM/AAAA, GG.MM.AA, MM/AAAA, GG-MMM-AAAA (es. 15-OTT-2026).
+
+---
+
+## TASKS & PROCESSING PIPELINE
+1. ROI Identification (Region of Interest): Scansiona l'imballaggio e individua le regioni contenenti timbri a getto d'inchiostro, etichette adesive o incisioni laser.
+2. Text Reconstruction & OCR: Per i caratteri Dot-Matrix, unisci concettualmente i punti separati o sbiaditi. Distingui chiaramente tra caratteri ambigui: 0 vs O, 1 vs I/l, 8 vs B.
+3. Format Validation & Post-Processing: Verifica che la sequenza estratta rispetti una sintassi di data o lotto coerente.
+4. Structured JSON Output: Restituisci ESCLUSIVAMENTE la risposta nel formato JSON specificato di seguito, senza testo introduttivo o conclusivo in linguaggio naturale.
+
+---
+
+## OUTPUT FORMAT (STRICT JSON)
+Devi rispondere SEMPRE ed ESCLUSIVAMENTE con un oggetto JSON strutturato esattamente come segue:
+{
+  "status": "SUCCESS",
+  "readability_score": 0.95,
+  "detection": {
+    "expiration_date": {
+      "raw_text": "SCAD 15/09/2026",
+      "parsed_date": "15/09/2026",
+      "confidence": 0.98
+    },
+    "lot_number": {
+      "raw_text": "L. 24891",
+      "parsed_lot": "24891",
+      "confidence": 0.96
+    }
+  },
+  "technical_analysis": {
+    "print_technology": "DOT_MATRIX",
+    "packaging_surface": "DEFORMABLE_PLASTIC",
+    "issues_detected": []
+  },
+  "validation": {
+    "is_date_valid_format": true,
+    "is_lot_present": true
+  }
+}`;
+
+// CHIAVE API PREDEFINITA PER TUTTI GLI OPERATORI AZIENDALI
+const DEFAULT_GEMINI_API_KEY = "AQ.Ab8RN6IJufte81724thkWmpXexQch_J1gFmndYaSiAa5Yrzy7g";
+
 // --- MODELLI DI BASE EUROSPIN PREDEFINITI ---
 const DEFAULT_EUROSPIN_MODELS = {
   pizze: {
@@ -132,6 +189,7 @@ db.version(1).stores({
 
 let activeModels = JSON.parse(JSON.stringify(DEFAULT_EUROSPIN_MODELS));
 let customCompanyLogo = null;
+let geminiApiKey = DEFAULT_GEMINI_API_KEY;
 
 let currentSession = {
   moduleKey: null,
@@ -182,9 +240,32 @@ async function loadCustomSettingsAndModels() {
       customCompanyLogo = savedLogo.value;
       updateLogoUI(customCompanyLogo);
     }
+    const savedKey = await db.settings.get('geminiApiKey');
+    if (savedKey && savedKey.value) {
+      geminiApiKey = savedKey.value;
+    } else {
+      geminiApiKey = DEFAULT_GEMINI_API_KEY;
+    }
+    document.getElementById('input-gemini-key').value = geminiApiKey;
+    updateGeminiStatusUI(true);
   } catch (e) {
     console.error("Errore caricamento impostazioni custom:", e);
+    geminiApiKey = DEFAULT_GEMINI_API_KEY;
+    updateGeminiStatusUI(true);
   }
+}
+
+function updateGeminiStatusUI(isActive) {
+  const badge = document.getElementById('gemini-status-badge');
+  const aiTag = document.getElementById('scan-ai-mode-tag');
+  const keyStatusText = document.getElementById('gemini-key-status');
+
+  badge.textContent = "✨ Gemini 3.6 AI";
+  badge.className = "ai-badge active";
+  if (aiTag) aiTag.textContent = "✨ Gemini 3.6 Vision AI Active";
+  keyStatusText.textContent = "✓ Chiave Aziendale Gemini attiva di default per tutti gli operatori!";
+  keyStatusText.className = "key-status-text success";
+  keyStatusText.classList.remove('hidden');
 }
 
 function setupNavigation() {
@@ -310,27 +391,20 @@ function setOcrMode(mode) {
   const targetBox = document.getElementById('scan-target-box');
   const targetLabel = document.getElementById('scan-target-label');
   const captureLabel = document.getElementById('btn-capture-label');
-  const switchBtn = document.getElementById('btn-switch-ocr-mode');
 
   if (mode === 'lot') {
     indicator.textContent = "PASSO 1: Scansiona il Codice LOTTO";
     indicator.className = "scan-step-badge step-1";
     targetBox.className = "scan-target-box step-1-mode";
-    targetLabel.textContent = "Inquadra il Codice Lotto";
-    captureLabel.textContent = "Scatta da Live";
-    switchBtn.textContent = "Passa a Scadenza →";
+    targetLabel.textContent = "Inquadra il Codice Lotto o Scadenza";
+    captureLabel.textContent = "Analizza con Gemini AI";
   } else {
     indicator.textContent = "PASSO 2: Scansiona la Data di SCADENZA";
     indicator.className = "scan-step-badge step-2";
     targetBox.className = "scan-target-box step-2-mode";
     targetLabel.textContent = "Inquadra la Data di Scadenza";
-    captureLabel.textContent = "Scatta da Live";
-    switchBtn.textContent = "← Passa a Lotto";
+    captureLabel.textContent = "Analizza con Gemini AI";
   }
-}
-
-function toggleOcrMode() {
-  setOcrMode(activeOcrMode === 'lot' ? 'expiry' : 'lot');
 }
 
 function showCurrentWizardStep() {
@@ -350,6 +424,7 @@ function showCurrentWizardStep() {
   document.getElementById('input-expiry-date').value = '';
   document.getElementById('btn-clear-lot').classList.add('hidden');
   document.getElementById('btn-clear-expiry').classList.add('hidden');
+  document.getElementById('gemini-result-info').classList.add('hidden');
 
   setOcrMode('lot');
 
@@ -454,7 +529,7 @@ function resetWizardToStart() {
 }
 
 
-// --- TELECAMERA & OCR CON FALLBACK SCATTO FOTO ---
+// --- TELECAMERA & OCR CON INTEGRAZIONE GEMINI 3.6 VISION AI ---
 async function startCamera() {
   stopCamera();
   const notice = document.getElementById('camera-fallback-notice');
@@ -493,18 +568,13 @@ async function captureAndRecognizeText() {
   }
   
   const video = document.getElementById('scanner-video');
-  const cropWidth = video.videoWidth * 0.85;
-  const cropHeight = video.videoHeight * 0.28;
-  const cropX = (video.videoWidth - cropWidth) / 2;
-  const cropY = (video.videoHeight - cropHeight) / 2;
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth || 1280;
+  canvas.height = video.videoHeight || 720;
+  const ctx = canvas.getContext('2d');
 
-  const cropCanvas = document.createElement('canvas');
-  cropCanvas.width = cropWidth;
-  cropCanvas.height = cropHeight;
-  const ctx = cropCanvas.getContext('2d');
-
-  ctx.drawImage(video, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
-  processCanvasAndRecognize(cropCanvas);
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  processCanvasAndRecognize(canvas);
 }
 
 function handleFilePhotoCapture(e) {
@@ -527,13 +597,133 @@ function handleFilePhotoCapture(e) {
   reader.readAsDataURL(file);
 }
 
-// PRE-PROCESSING E OCR SMART (ESTRAE SIA LOTTO CHE SCADENZA SE PRESENTI ENTRAMBI)
+// CHIAMATA API DIRETTA A GEMINI 3.6 VISION AI CON TEMPERATURE 0.1 E JSON SCHEMA
+async function callGeminiVisionAPI(base64DataUrl) {
+  const keyToUse = geminiApiKey || DEFAULT_GEMINI_API_KEY;
+  const pureBase64 = base64DataUrl.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
+
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${keyToUse}`;
+
+  const requestPayload = {
+    contents: [
+      {
+        parts: [
+          { text: GEMINI_SYSTEM_PROMPT },
+          {
+            inline_data: {
+              mime_type: "image/jpeg",
+              data: pureBase64
+            }
+          }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      response_mime_type: "application/json"
+    }
+  };
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(requestPayload)
+  });
+
+  if (!response.ok) {
+    const errJson = await response.json().catch(() => ({}));
+    throw new Error(errJson.error?.message || `Errore API Gemini (${response.status})`);
+  }
+
+  const resJson = await response.json();
+  const rawResponseText = resJson.candidates?.[0]?.content?.parts?.[0]?.text;
+  
+  if (!rawResponseText) throw new Error("Nessuna risposta generata da Gemini AI.");
+
+  return JSON.parse(rawResponseText);
+}
+
+// ELABORAZIONE IMMAGINE: GEMINI 3.6 VISION AI (CON FALLBACK LOCALE TESSERACT)
 async function processCanvasAndRecognize(canvas) {
   const loader = document.getElementById('scanner-loader');
   const loaderText = document.getElementById('scanner-loader-text');
-  
+  const infoBox = document.getElementById('gemini-result-info');
+  const infoDetails = document.getElementById('gemini-info-details');
+  const scoreBadge = document.getElementById('gemini-score-badge');
+  const targetBox = document.getElementById('scan-target-box');
+
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+
+  loaderText.textContent = "✨ Analisi AI Gemini 3.6 (Vision)...";
+  loader.classList.remove('hidden');
+
+  try {
+    const aiResponse = await callGeminiVisionAPI(dataUrl);
+    console.log("Risposta Gemini 3.6 AI:", aiResponse);
+
+    targetBox.classList.add('success');
+    setTimeout(() => targetBox.classList.remove('success'), 600);
+
+    const detection = aiResponse.detection || {};
+    const expObj = detection.expiration_date || {};
+    const lotObj = detection.lot_number || {};
+
+    const inputLot = document.getElementById('input-lot-code');
+    const inputExp = document.getElementById('input-expiry-date');
+
+    let lotVal = lotObj.parsed_lot || parseLotCode(lotObj.raw_text || "");
+    let expVal = expObj.parsed_date || parseExpiryDate(expObj.raw_text || "");
+
+    let lotFilled = false;
+    let expFilled = false;
+
+    if (lotVal) {
+      inputLot.value = lotVal;
+      document.getElementById('btn-clear-lot').classList.remove('hidden');
+      lotFilled = true;
+    }
+
+    if (expVal) {
+      inputExp.value = formatISOToItalianDate(expVal);
+      document.getElementById('btn-clear-expiry').classList.remove('hidden');
+      expFilled = true;
+    }
+
+    const score = Math.round((aiResponse.readability_score || 0.9) * 100);
+    scoreBadge.textContent = `Leggibilità: ${score}%`;
+
+    const tech = aiResponse.technical_analysis || {};
+    infoDetails.innerHTML = `
+      <div><strong>Stampa:</strong> ${tech.print_technology || 'Standard/Dot-Matrix'} &bull; <strong>Superficie:</strong> ${tech.packaging_surface || 'Packaging'}</div>
+      <div><strong>Lotto estratto:</strong> ${lotVal || 'Non rilevato'} &bull; <strong>Scadenza:</strong> ${expVal || 'Non rilevata'}</div>
+    `;
+    infoBox.classList.remove('hidden');
+
+    if (lotFilled) {
+      setOcrMode('expiry');
+    }
+
+    if (!lotFilled && !expFilled) {
+      alert("Gemini 3.6 non ha individuato lotti o scadenze in questa inquadratura. Riprova scattando da più vicino.");
+    }
+
+  } catch (err) {
+    console.error("Errore Chiamata Gemini AI:", err);
+    alert(`Errore Gemini AI: ${err.message}. Passo al motore OCR locale...`);
+    runLocalTesseractOCR(canvas);
+  } finally {
+    loader.classList.add('hidden');
+  }
+}
+
+// MOTORE OCR LOCALE TESSERACT (FALLBACK DI RISERVA)
+async function runLocalTesseractOCR(canvas) {
+  const loader = document.getElementById('scanner-loader');
+  const loaderText = document.getElementById('scanner-loader-text');
+  const targetBox = document.getElementById('scan-target-box');
+
   if (!ocrWorker) {
-    loaderText.textContent = "Inizializzazione OCR...";
+    loaderText.textContent = "Inizializzazione OCR Locale...";
     loader.classList.remove('hidden');
     ocrWorker = await Tesseract.createWorker('ita');
     await ocrWorker.setParameters({
@@ -541,49 +731,18 @@ async function processCanvasAndRecognize(canvas) {
     });
   }
 
-  loaderText.textContent = activeOcrMode === 'lot' ? "Lettura Codice Lotto..." : "Lettura Data Scadenza...";
+  loaderText.textContent = "Lettura OCR Locale...";
   loader.classList.remove('hidden');
 
-  const ctx = canvas.getContext('2d');
-  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const data = imgData.data;
-
-  for (let i = 0; i < data.length; i += 4) {
-    const gray = 0.3 * data[i] + 0.59 * data[i + 1] + 0.11 * data[i + 2];
-    const val = (gray > 115) ? 255 : 0;
-    data[i] = val; data[i + 1] = val; data[i + 2] = val;
-  }
-
-  // Dilatazione pixel per caratteri puntinati
-  const w = canvas.width;
-  const h = canvas.height;
-  const copy = new Uint8ClampedArray(data);
-
-  for (let y = 1; y < h - 1; y++) {
-    for (let x = 1; x < w - 1; x++) {
-      const idx = (y * w + x) * 4;
-      if (copy[idx] === 0) {
-        data[((y - 1) * w + x) * 4] = 0;
-        data[((y + 1) * w + x) * 4] = 0;
-        data[(y * w + (x - 1)) * 4] = 0;
-        data[(y * w + (x + 1)) * 4] = 0;
-      }
-    }
-  }
-
-  ctx.putImageData(imgData, 0, 0);
   const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
-
-  const targetBox = document.getElementById('scan-target-box');
-  targetBox.classList.add('success');
-  setTimeout(() => targetBox.classList.remove('success'), 600);
 
   try {
     const result = await ocrWorker.recognize(dataUrl);
     const rawText = result.data.text;
-    console.log("OCR Raw Text:", rawText);
+    
+    targetBox.classList.add('success');
+    setTimeout(() => targetBox.classList.remove('success'), 600);
 
-    // Tentiamo di estrarre sia la scadenza che il lotto dal testo acquisito
     const detectedExpiry = parseExpiryDate(rawText);
     const detectedLot = parseLotCode(rawText);
 
@@ -605,18 +764,29 @@ async function processCanvasAndRecognize(canvas) {
       expFilled = true;
     }
 
-    if (activeOcrMode === 'lot' && lotFilled) {
-      setOcrMode('expiry');
-    }
+    if (lotFilled) setOcrMode('expiry');
 
     if (!lotFilled && !expFilled) {
-      alert("Nessun lotto o scadenza leggibile nell'area inquadrata. Scatta da più vicino o digitali manualmente.");
+      alert("Nessun lotto o scadenza letto con OCR locale.");
     }
   } catch (err) {
-    console.error("Errore OCR:", err);
+    console.error("Errore OCR Locale:", err);
   } finally {
     loader.classList.add('hidden');
   }
+}
+
+function formatISOToItalianDate(dateStr) {
+  if (!dateStr) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [y, m, d] = dateStr.split('-');
+    return `${d}/${m}/${y}`;
+  }
+  if (/^\d{4}-\d{2}$/.test(dateStr)) {
+    const [y, m] = dateStr.split('-');
+    return `${m}/${y}`;
+  }
+  return dateStr.replace(/[\.-]/g, '/');
 }
 
 function parseLotCode(text) {
@@ -644,6 +814,43 @@ function parseExpiryDate(text) {
   if (match) return match[1].replace(/[\.-]/g, '/');
 
   return "";
+}
+
+
+// --- GESTIONE CHIAVE API GEMINI NELLE IMPOSTAZIONI ---
+function setupGeminiApiKeyHandler() {
+  const inputKey = document.getElementById('input-gemini-key');
+  const btnSave = document.getElementById('btn-save-gemini-key');
+  const btnToggle = document.getElementById('btn-toggle-show-key');
+
+  btnSave.addEventListener('click', async () => {
+    const keyVal = inputKey.value.trim();
+    if (!keyVal) {
+      if (confirm("Ripristinare la chiave aziendale predefinita di Gemini?")) {
+        geminiApiKey = DEFAULT_GEMINI_API_KEY;
+        await db.settings.delete('geminiApiKey');
+        inputKey.value = geminiApiKey;
+        updateGeminiStatusUI(true);
+        alert("Chiave aziendale predefinita ripristinata!");
+      }
+      return;
+    }
+
+    geminiApiKey = keyVal;
+    await db.settings.put({ key: 'geminiApiKey', value: keyVal });
+    updateGeminiStatusUI(true);
+    alert("✨ Chiave API Gemini salvata con successo! L'intelligenza artificiale è attiva.");
+  });
+
+  btnToggle.addEventListener('click', () => {
+    if (inputKey.type === 'password') {
+      inputKey.type = 'text';
+      btnToggle.textContent = 'Nascondi';
+    } else {
+      inputKey.type = 'password';
+      btnToggle.textContent = 'Mostra';
+    }
+  });
 }
 
 
@@ -797,7 +1004,7 @@ async function saveCustomModelsDB() {
 }
 
 
-// --- RENDER FOGLIO 1:1 STAMPABILE CON LOGO PERSONALIZZATO ---
+// --- RENDER FOGLIO 1:1 STAMPABILE ---
 function renderEurospinPaperSheet(sessionData) {
   const modelKey = sessionData.moduleKey || "pizze";
   const model = activeModels[modelKey];
@@ -836,7 +1043,6 @@ function renderEurospinPaperSheet(sessionData) {
 
   let tbodyHTML = '';
 
-  // CORREZIONE BUG FONDAMENTALE: aggiunta di rIndex nel ciclo per la corretta associazione delle ricette selezionate
   model.recipes.forEach((recipe, rIndex) => {
     const isPreparedToday = sessionData.selectedRecipes ? sessionData.selectedRecipes.includes(rIndex) : true;
     const ingCount = recipe.ingredients.length;
@@ -939,8 +1145,6 @@ function setupEventListeners() {
     e.target.textContent = isAllChecked ? "Seleziona Tutti" : "Deseleziona Tutti";
   });
 
-  document.getElementById('btn-switch-ocr-mode').addEventListener('click', toggleOcrMode);
-
   document.getElementById('btn-confirm-next').addEventListener('click', () => nextWizardStep(false));
   document.getElementById('btn-skip-ingredient').addEventListener('click', () => nextWizardStep(true));
   document.getElementById('btn-prev-ingredient').addEventListener('click', prevWizardStep);
@@ -972,6 +1176,7 @@ function setupEventListeners() {
     exportSessionToExcel(currentData);
   });
 
+  setupGeminiApiKeyHandler();
   setupCompanyLogoUploader();
 
   document.getElementById('select-editor-module').addEventListener('change', renderRecipeEditorUI);

@@ -8,6 +8,9 @@
   --accent-color: #0A84FF;
   --accent-glow: rgba(10, 132, 255, 0.25);
   
+  --ai-purple: #a855f7;
+  --ai-purple-glow: rgba(168, 85, 247, 0.3);
+
   --text-primary: #f5f7fa;
   --text-secondary: #8e9bb0;
   --text-muted: #5e6b7e;
@@ -40,11 +43,18 @@ body { font-family: var(--font-family); background-color: var(--bg-primary); col
 .header-content { display: flex; justify-content: space-between; align-items: center; max-width: 600px; margin: 0 auto; }
 .brand-wrapper { display: flex; align-items: center; gap: 10px; }
 .header-app-logo { width: 32px; height: 32px; border-radius: 8px; object-fit: cover; border: 1px solid var(--glass-border); }
-.app-header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.app-header h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.5px; background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+.header-status-wrapper { display: flex; align-items: center; gap: 6px; }
 
 .status-indicator { font-size: 11px; font-weight: 600; text-transform: uppercase; padding: 4px 8px; border-radius: 20px; }
 .status-indicator.online { background-color: var(--color-success-bg); color: var(--color-success); }
 .status-indicator.offline { background-color: var(--color-danger-bg); color: var(--color-danger); }
+
+/* BADGE STATO IA GEMINI */
+.ai-badge { font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 4px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px; }
+.ai-badge.active { background-color: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); box-shadow: 0 0 10px var(--ai-purple-glow); }
+.ai-badge.inactive { background-color: rgba(255, 255, 255, 0.05); color: var(--text-muted); border: 1px solid var(--glass-border); }
 
 .app-content { flex: 1; padding: 20px; max-width: 600px; width: 100%; margin: 0 auto; padding-bottom: calc(90px + var(--safe-bottom)); }
 .tab-content { display: none; animation: fadeIn 0.3s ease; }
@@ -59,7 +69,7 @@ body { font-family: var(--font-family); background-color: var(--bg-primary); col
 .icon-bubble.success { color: var(--color-success); background: var(--color-success-bg); }
 
 .btn { font-family: var(--font-family); font-size: 15px; font-weight: 600; padding: 12px 20px; border-radius: var(--radius-md); border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease; width: 100%; }
-.btn-primary { background-color: var(--accent-color); color: #fff; box-shadow: 0 4px 15px var(--accent-glow); }
+.btn-primary { background: linear-gradient(135deg, var(--accent-color) 0%, #3b82f6 100%); color: #fff; box-shadow: 0 4px 15px var(--accent-glow); }
 .btn-secondary { background-color: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--glass-border); }
 .btn-neutral { background-color: rgba(255, 255, 255, 0.05); color: var(--text-secondary); border: 1px solid var(--glass-border); }
 .btn-danger { background-color: var(--color-danger-bg); color: var(--color-danger); border: 1px solid rgba(255, 69, 58, 0.3); }
@@ -102,11 +112,13 @@ body { font-family: var(--font-family); background-color: var(--bg-primary); col
 .smart-banner-content { flex: 1; display: flex; flex-direction: column; font-size: 12px; color: var(--text-primary); }
 .smart-banner-content strong { color: var(--color-warning); font-size: 13px; margin-top: 2px; }
 
-/* SCANNER FOTOCAMERA GUIDATO & FALLBACK NOTICE */
+/* SCANNER FOTOCAMERA GUIDATO & AI TAG */
 .scan-step-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .scan-step-badge { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
 .scan-step-badge.step-1 { background-color: var(--accent-glow); color: var(--accent-color); border: 1px solid rgba(10, 132, 255, 0.4); }
 .scan-step-badge.step-2 { background-color: var(--color-success-bg); color: var(--color-success); border: 1px solid rgba(48, 209, 88, 0.4); }
+
+.scan-ai-tag { font-size: 11px; font-weight: 700; color: #c084fc; background: rgba(168, 85, 247, 0.15); padding: 3px 8px; border-radius: 12px; border: 1px solid rgba(168, 85, 247, 0.3); }
 
 .scanner-container { display: flex; flex-direction: column; gap: 10px; margin: 10px 0 15px 0; }
 .video-wrapper { position: relative; width: 100%; aspect-ratio: 4 / 3; border-radius: var(--radius-md); overflow: hidden; background-color: #000; border: 1px solid var(--glass-border); }
@@ -145,15 +157,17 @@ body { font-family: var(--font-family); background-color: var(--bg-primary); col
 .corner.bottom-right { bottom: -2px; right: -2px; border-left: none; border-top: none; }
 
 .scan-label { position: absolute; bottom: -25px; left: 0; width: 100%; text-align: center; color: #fff; font-size: 11px; text-transform: uppercase; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
-.scanner-loading { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 14, 23, 0.85); backdrop-filter: blur(4px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; z-index: 15; }
-.spinner { width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent-color); border-radius: 50%; animation: spin 0.8s linear infinite; }
+.scanner-loading { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10, 14, 23, 0.88); backdrop-filter: blur(6px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 15; }
+.spinner { width: 34px; height: 34px; border: 3px solid rgba(168,85,247,0.2); border-top-color: var(--ai-purple); border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.scanner-controls-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 8px;
-}
+/* RIQUADRO DETTAGLI IA GEMINI */
+.gemini-info-box { background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: var(--radius-md); padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+.gemini-info-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-primary); }
+.score-badge { font-size: 11px; font-weight: 700; background-color: var(--color-success-bg); color: var(--color-success); padding: 2px 8px; border-radius: 10px; }
+.gemini-info-details { font-size: 11px; color: var(--text-secondary); line-height: 1.4; }
+
+.scanner-controls-grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; }
 
 /* INPUTS GRID LOTTO E SCADENZA */
 .inputs-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
@@ -181,6 +195,11 @@ body { font-family: var(--font-family); background-color: var(--bg-primary); col
 .btn-text-action { background: none; border: none; font-family: var(--font-family); font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; }
 .btn-text-action.export { color: var(--accent-color); }
 .btn-text-action.delete { color: var(--color-danger); }
+
+/* GEMINI AI SETTINGS CARD */
+.gemini-ai-card { border-color: rgba(168, 85, 247, 0.3); background: linear-gradient(135deg, rgba(20, 27, 41, 0.9) 0%, rgba(30, 20, 50, 0.8) 100%); }
+.key-status-text.success { color: var(--color-success); }
+.key-status-text.warning { color: var(--color-warning); }
 
 /* UPLOAD LOGO */
 .logo-upload-wrapper { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }

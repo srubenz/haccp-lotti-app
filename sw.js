@@ -1,4 +1,4 @@
-const CACHE_NAME = 'haccp-lotti-v3';
+const CACHE_NAME = 'haccp-lotti-v5';
 const ASSETS_TO_CACHE = [
   'index.html',
   'style.css',
@@ -10,7 +10,7 @@ const ASSETS_TO_CACHE = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker v3] Pre-caching core assets');
+      console.log('[Service Worker v5] Pre-caching core assets with pre-configured Gemini 3.6 AI key');
       return cache.addAll(ASSETS_TO_CACHE);
     }).then(() => self.skipWaiting())
   );
@@ -22,7 +22,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('[Service Worker v3] Eliminazione vecchio cache:', cacheName);
+            console.log('[Service Worker v5] Eliminazione vecchio cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
