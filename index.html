@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Modulo Scadenze e Rintracciabilità HACCP</title>
+  <title>Modulo Tracciabilità Preparazioni HACCP</title>
   
   <!-- Configurazione iOS PWA -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Lotti HACCP">
+  <meta name="apple-mobile-web-app-title" content="Tracciabilità HACCP">
   <link rel="apple-touch-icon" href="icon.jpg">
   <link rel="manifest" href="manifest.json">
   
@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
-  <!-- Stili personalizzati -->
+  <!-- Stili personalizzati aziendali -->
   <link rel="stylesheet" href="style.css">
   
   <!-- Librerie Esterne -->
@@ -31,11 +31,13 @@
   <header class="app-header no-print">
     <div class="header-content">
       <div class="brand-wrapper">
-        <img id="app-header-logo" src="icon.jpg" alt="Logo" class="header-app-logo">
-        <h1>Rintracciabilità Gastronomia</h1>
+        <img id="app-header-logo" src="icon.jpg" alt="Logo Aziendale" class="header-app-logo">
+        <div class="header-titles">
+          <h1>Modulo Tracciabilità Preparazioni</h1>
+          <span class="header-subtitle">Eurospin Rev. 02 del 15/05/2025</span>
+        </div>
       </div>
       <div class="header-status-wrapper">
-        <span id="gemini-status-badge" class="ai-badge inactive">AI Off</span>
         <span class="status-indicator online" id="connection-status">Online</span>
       </div>
     </div>
@@ -51,24 +53,33 @@
       <div id="wizard-step-module" class="wizard-state-container">
         <div class="card empty-state">
           <div class="icon-bubble">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
               <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
             </svg>
           </div>
-          <h2>Seleziona Modulo Aziendale</h2>
-          <p>Scegli quale foglio ufficiale intendi compilare per la registrazione lotti di oggi:</p>
+          <h2>Selezione Modulo Aziendale</h2>
+          <p>Scegli il foglio di tracciabilità preparazioni da compilare oggi:</p>
           
           <div class="module-selection-grid">
             <button class="module-card-btn" data-module="pizze">
-              <div class="module-icon">🍕</div>
+              <div class="module-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18M3 12h18" />
+                </svg>
+              </div>
               <div class="module-info">
-                <h3>Modulo 1: Pizze</h3>
-                <span>Pizza Diavola, Capricciosa, Mortadella, Zucchine, Caprese</span>
+                <h3>Modulo 1: Pizze (Rev. 02 del 15/05/2025)</h3>
+                <span>Pizza bianca, Pizza rossa, Margherita, Marinara, Napoli, Diavola, Crostino</span>
               </div>
             </button>
 
             <button class="module-card-btn" data-module="gastronomia">
-              <div class="module-icon">🍗</div>
+              <div class="module-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+              </div>
               <div class="module-info">
                 <h3>Modulo 2: Gastronomia & Rosticceria</h3>
                 <span>Lasagna, Cannelloni, Gnocchi, Costine BBQ, Polli, Arancini, Cotolette</span>
@@ -83,8 +94,8 @@
         <div class="card">
           <div class="card-header-with-action">
             <div>
-              <h2 id="recipe-selection-title">Ricette del Giorno</h2>
-              <p>Seleziona solo le preparazioni che realizzerete oggi. Le altre rimarranno vuote nel foglio finale.</p>
+              <h2 id="recipe-selection-title">Preparazioni del Giorno</h2>
+              <p>Seleziona le preparazioni in programma per oggi. Le altre rimarranno vuote sul foglio finale.</p>
             </div>
             <button id="btn-toggle-all-recipes" class="btn-text-action export">Deseleziona Tutti</button>
           </div>
@@ -118,33 +129,36 @@
         <!-- Card Ingrediente Corrente -->
         <div class="card product-card">
           <div class="recipe-context-header">
-            <span class="recipe-tag" id="current-recipe-name">Pizza Diavola</span>
+            <span class="recipe-tag" id="current-recipe-name">Pizza Margherita</span>
             <span class="product-index" id="current-step-index">#1</span>
           </div>
 
           <div class="ingredient-main-info">
-            <h2 id="current-ingredient-name">Base pizza</h2>
-            <div class="supplier-badge">
+            <h2 id="current-ingredient-name">Pizza base bianca</h2>
+            <div class="supplier-badge" id="supplier-badge-wrapper">
               <span class="supplier-label">Fornitore:</span>
-              <strong id="current-supplier-name">Menichetti Food</strong>
+              <strong id="current-supplier-name">—</strong>
             </div>
           </div>
 
           <!-- Banner Suggerimento Lotto Già Usato -->
           <div id="smart-reuse-banner" class="smart-banner hidden">
-            <div class="smart-banner-icon">💡</div>
+            <div class="smart-banner-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
             <div class="smart-banner-content">
-              <span>Lotto già registrato per questo ingrediente:</span>
+              <span>Lotto registrato in precedenza:</span>
               <strong id="smart-reuse-text">L2409B - Scad: 15/09/2026</strong>
             </div>
-            <button id="btn-apply-smart-reuse" class="btn btn-secondary btn-sm">Usa Questo Lotto</button>
+            <button id="btn-apply-smart-reuse" class="btn btn-secondary btn-sm">Riusa Lotto</button>
           </div>
 
-          <!-- SCANNER FOTOCAMERA GUIDATO A 2 PASSI CON GEMINI 3.6 VISION -->
+          <!-- SCANNER FOTOCAMERA CONTINUO AD AMPIA AREA (90% FRAME) -->
           <div class="scanner-container">
             <div class="scan-step-header">
-              <span id="scan-step-indicator" class="scan-step-badge step-1">PASSO 1: Scansiona il Codice LOTTO</span>
-              <span id="scan-ai-mode-tag" class="scan-ai-tag">✨ Gemini 3.6 Vision AI</span>
+              <span id="scan-step-indicator" class="scan-step-badge continuous">Scansione Continua in Tempo Reale</span>
             </div>
 
             <div class="video-wrapper">
@@ -156,53 +170,33 @@
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
                 </svg>
-                <span>Fotocamera live non disponibile su questa connessione HTTP.</span>
-                <small>Usa il pulsante "Scatta Foto / Galleria" sotto per fotografare la confezione!</small>
+                <span>Fotocamera live non accessibile via HTTP.</span>
+                <small>Usa il pulsante "Carica Foto / Galleria" sotto per fotografare la confezione.</small>
               </div>
 
-              <!-- Mirino Dinamico -->
-              <div id="scan-target-box" class="scan-target-box step-1-mode">
+              <!-- Mirino Ad Ampia Area (90% Larghezza) -->
+              <div id="scan-target-box" class="scan-target-box large-area">
                 <div class="corner top-left"></div>
                 <div class="corner top-right"></div>
                 <div class="corner bottom-left"></div>
                 <div class="corner bottom-right"></div>
-                <span id="scan-target-label" class="scan-label">Inquadra il Codice Lotto o Scadenza</span>
+                <span id="scan-target-label" class="scan-label">Inquadra l'etichetta del lotto o scadenza</span>
               </div>
               
               <div class="scanner-loading hidden" id="scanner-loader">
                 <div class="spinner"></div>
-                <span id="scanner-loader-text">Analisi AI Gemini 3.6 (Vision)...</span>
+                <span id="scanner-loader-text">Lettura in corso...</span>
               </div>
             </div>
 
-            <!-- ESITO DETTAGLIATO IA (Punteggio Leggibilità e Confidenza) -->
-            <div id="gemini-result-info" class="gemini-info-box hidden">
-              <div class="gemini-info-header">
-                <strong>✨ Risultato Rilevamento Gemini 3.6</strong>
-                <span id="gemini-score-badge" class="score-badge">Leggibilità: 98%</span>
-              </div>
-              <div id="gemini-info-details" class="gemini-info-details">
-                <!-- Popolato via JS -->
-              </div>
-            </div>
-
-            <!-- CONTROLLI SCANNER & PULSANTE SCATTA FOTO NATIVA -->
+            <!-- CONTROLLI SCANNER -->
             <div class="scanner-controls-grid">
-              <button id="btn-capture" class="btn btn-primary">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                  <circle cx="12" cy="13" r="4" />
-                </svg>
-                <span id="btn-capture-label">Analizza con Gemini AI</span>
-              </button>
-
-              <button id="btn-file-capture" class="btn btn-secondary">
+              <button id="btn-file-capture" class="btn btn-secondary" style="grid-column: span 2;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
                 </svg>
-                <span>Scatta Foto / Galleria</span>
+                <span>Carica Foto / Galleria</span>
               </button>
-
               <input type="file" id="input-ocr-file" accept="image/*" capture="environment" class="hidden">
 
               <button id="btn-toggle-camera" class="btn btn-icon-only">
@@ -213,20 +207,20 @@
             </div>
           </div>
 
-          <!-- Campi Input: Lotto e Scadenza -->
+          <!-- Campi Input: Lotto e Scadenza a Calendario -->
           <div class="inputs-grid-2col">
             <div class="input-group" id="group-input-lot">
               <label for="input-lot-code">Lotto</label>
               <div class="input-wrapper">
-                <input type="text" id="input-lot-code" autocomplete="off" placeholder="Es. L2409B">
+                <input type="text" id="input-lot-code" autocomplete="off" placeholder="Codice Lotto">
                 <button id="btn-clear-lot" class="btn-clear hidden">&times;</button>
               </div>
             </div>
 
             <div class="input-group" id="group-input-expiry">
-              <label for="input-expiry-date">Scadenza (gg/mm/aaaa o mm/aaaa)</label>
+              <label for="input-expiry-date">Scadenza (Calendario)</label>
               <div class="input-wrapper">
-                <input type="text" id="input-expiry-date" autocomplete="off" placeholder="Es. 15/09/2026">
+                <input type="date" id="input-expiry-date" class="date-picker-input">
                 <button id="btn-clear-expiry" class="btn-clear hidden">&times;</button>
               </div>
             </div>
@@ -260,7 +254,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2>Modulo Compilato con Successo!</h2>
+          <h2>Modulo Compilato con Successo</h2>
           <p>Tutti i lotti e le scadenze inseriti sono stati formattati nel modello aziendale.</p>
           
           <div class="summary-details">
@@ -319,32 +313,10 @@
     <!-- SCHEDA 3: IMPOSTAZIONI -->
     <section id="sec-settings" class="tab-content">
       
-      <!-- CONFIGURAZIONE GEMINI 3.6 VISION AI -->
-      <div class="card settings-card gemini-ai-card">
-        <div class="card-header">
-          <h3>✨ Integrazione AI Gemini 3.6 per OCR Industriale</h3>
-          <p>Inserisci la tua Chiave API di Gemini per attivare la lettura istantanea ad altissima precisione per font puntinati (dot-matrix), scritte sgranate e buste piegate.</p>
-        </div>
-
-        <div class="input-group" style="margin-top: 10px;">
-          <label for="input-gemini-key">Chiave API Gemini (Google AI Studio)</label>
-          <div class="input-wrapper">
-            <input type="password" id="input-gemini-key" placeholder="Incolla qui la tua API Key (es. AIzaSy...)" autocomplete="off">
-            <button id="btn-toggle-show-key" class="btn-clear" style="width: auto; padding: 0 8px; border-radius: 4px; font-size: 11px;">Mostra</button>
-          </div>
-        </div>
-
-        <div class="settings-actions" style="margin-top: 12px;">
-          <button id="btn-save-gemini-key" class="btn btn-primary">Salva Chiave API Gemini</button>
-        </div>
-
-        <div id="gemini-key-status" class="key-status-text hidden" style="margin-top: 8px; font-size: 12px;"></div>
-      </div>
-
       <div class="card settings-card">
         <div class="card-header">
           <h3>Logo Aziendale Personalizzato</h3>
-          <p>Carica l'immagine del logo della tua azienda per il foglio stampabile A4 e PDF.</p>
+          <p>Carica l'immagine del logo della tua azienda per l'intestazione del foglio stampabile A4 e PDF.</p>
         </div>
 
         <div class="logo-upload-wrapper">
@@ -365,15 +337,15 @@
 
       <div class="card settings-card">
         <div class="card-header">
-          <h3>Editor Ricette e Fornitori</h3>
-          <p>Modifica i fornitori di ciascun ingrediente o aggiungi nuove preparazioni.</p>
+          <h3>Editor Ricette e Preparazioni</h3>
+          <p>Modifica le preparazioni, aggiungi nuovi ingredienti o aggiorna le forniture.</p>
         </div>
 
         <div class="input-group">
           <label for="select-editor-module">Seleziona Modello da Modificare</label>
           <div class="input-wrapper">
             <select id="select-editor-module" class="select-input">
-              <option value="pizze">Modulo 1: Pizze</option>
+              <option value="pizze">Modulo 1: Pizze (Rev. 02 del 15/05/2025)</option>
               <option value="gastronomia">Modulo 2: Gastronomia & Rosticceria</option>
             </select>
           </div>
@@ -389,16 +361,16 @@
       <div class="card settings-card danger-zone">
         <div class="card-header">
           <h3 class="text-danger">Ripristino Dati</h3>
-          <p>Ripristina i modelli ufficiali e i fornitori originali.</p>
+          <p>Ripristina i modelli ufficiali e i dati originali Eurospin.</p>
         </div>
         <div class="settings-actions">
-          <button id="btn-reset-models" class="btn btn-secondary">Ripristina Fornitori Predefiniti</button>
+          <button id="btn-reset-models" class="btn btn-secondary">Ripristina Modelli Predefiniti</button>
           <button id="btn-clear-all" class="btn btn-danger">Elimina Storico Registrazioni</button>
         </div>
       </div>
 
       <div class="settings-footer">
-        <p>Eurospin HACCP Gastronomia v3.0 &bull; Modulo 1 - Istr. N. 1 &bull; Powered by Gemini 3.6 Vision AI</p>
+        <p>Eurospin HACCP Gastronomia v4.0 &bull; Modulo tracciabilità Preparazioni Rev. 02 del 15/05/2025</p>
       </div>
     </section>
 
@@ -423,25 +395,24 @@
           <td class="logo-cell" style="width: 20%;">
             <div id="paper-logo-container">
               <div class="eurospin-logo-box">
-                <span class="logo-top">★ EURO ★</span>
+                <span class="logo-top">EURO</span>
                 <span class="logo-bottom">Spin</span>
               </div>
             </div>
-            <div class="code-sub">Modulo 1 - Istr. N. 1</div>
           </td>
           <td class="title-cell" style="width: 50%;">
             <div class="main-title">ISTRUZIONE OPERATIVE INTERNE</div>
-            <div class="sub-title">Modulo Scadenze e rintracciabilità gastronomie</div>
+            <div class="sub-title" id="paper-subtitle">Modulo tracciabilità Preparazioni</div>
           </td>
           <td class="info-cell" style="width: 30%;">
-            <div>Data Emissione: 2016 Rev.01 del 18/10/2016</div>
-            <div style="margin-top: 10px;">Pagina 1 di 1</div>
+            <div id="paper-emit-info">Data Emissione: 2016 Rev. 02 del 15/05/2025</div>
+            <div style="margin-top: 6px;" id="paper-page-info">Pagina 1 di 2</div>
           </td>
         </tr>
       </table>
 
       <div class="paper-date-row">
-        <span>Data <strong id="print-date-field">__/__/____</strong></span>
+        <span>Data: <strong id="print-date-field">__/__/____</strong></span>
       </div>
 
       <table class="paper-data-table" id="paper-data-table">

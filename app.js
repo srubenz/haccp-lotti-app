@@ -1,122 +1,82 @@
-// --- SYSTEM PROMPT PER GEMINI 3.6 VISION AI ---
-const GEMINI_SYSTEM_PROMPT = `# SYSTEM PROMPT: Industrial Packaging OCR & Expiration Date Validator (Gemini 3.6)
-
-## ROLE & OBJECTIVE
-Sei un sistema esperto di Computer Vision e Quality Assurance industriale specializzato nel riconoscimento e nella validazione di testo su imballaggi alimentari. 
-Il tuo obiettivo è analizzare foto di prodotti alimentari, individuare le diciture relative a **Data di Scadenza (Expiration Date)** e **Numero di Lotto (Lot Number)** — incluse quelle stampate con tecnologia a matrice di punti (Dot-Matrix) o getto d'inchiostro — estrarne i dati in formato pulito e validarne la sintassi e la leggibilità.
-
----
-
-## CONTEXT & DOMAIN KNOWLEDGE
-- **Variabilità dei font:** Il testo può apparire in font tradizionali, stampati o in formato **Dot-Matrix** (punti di inchiostro separati/sbiaditi). Ricomponi visivamente i punti adiacenti per interpretare il carattere corretto.
-- **Supporti di stampa:** Il testo può trovarsi su superfici deformate (buste di plastica), curve (bottiglie, lattine) o riflettenti.
-- **Prefissi comuni per il Lotto:** L, LOT, LOTTO, L., BATCH, BN, B/N.
-- **Prefissi comuni per la Scadenza:** EXP, SCAD, BEST BEFORE, DA CONSUMARSI ENTRO, BBE, USE BY.
-- **Formati data standard:** GG/MM/AAAA, GG.MM.AA, MM/AAAA, GG-MMM-AAAA (es. 15-OTT-2026).
-
----
-
-## TASKS & PROCESSING PIPELINE
-1. ROI Identification (Region of Interest): Scansiona l'imballaggio e individua le regioni contenenti timbri a getto d'inchiostro, etichette adesive o incisioni laser.
-2. Text Reconstruction & OCR: Per i caratteri Dot-Matrix, unisci concettualmente i punti separati o sbiaditi. Distingui chiaramente tra caratteri ambigui: 0 vs O, 1 vs I/l, 8 vs B.
-3. Format Validation & Post-Processing: Verifica che la sequenza estratta rispetti una sintassi di data o lotto coerente.
-4. Structured JSON Output: Restituisci ESCLUSIVAMENTE la risposta nel formato JSON specificato di seguito, senza testo introduttivo o conclusivo in linguaggio naturale.
-
----
-
-## OUTPUT FORMAT (STRICT JSON)
-Devi rispondere SEMPRE ed ESCLUSIVAMENTE con un oggetto JSON strutturato esattamente come segue:
-{
-  "status": "SUCCESS",
-  "readability_score": 0.95,
-  "detection": {
-    "expiration_date": {
-      "raw_text": "SCAD 15/09/2026",
-      "parsed_date": "15/09/2026",
-      "confidence": 0.98
-    },
-    "lot_number": {
-      "raw_text": "L. 24891",
-      "parsed_lot": "24891",
-      "confidence": 0.96
-    }
-  },
-  "technical_analysis": {
-    "print_technology": "DOT_MATRIX",
-    "packaging_surface": "DEFORMABLE_PLASTIC",
-    "issues_detected": []
-  },
-  "validation": {
-    "is_date_valid_format": true,
-    "is_lot_present": true
-  }
-}`;
-
-// CHIAVE API PREDEFINITA PER TUTTI GLI OPERATORI AZIENDALI
-const DEFAULT_GEMINI_API_KEY = "AQ.Ab8RN6IJufte81724thkWmpXexQch_J1gFmndYaSiAa5Yrzy7g";
-
-// --- MODELLI DI BASE EUROSPIN PREDEFINITI ---
+// --- MODELLI DI BASE EUROSPIN AGGIORNATI (REV. 02 DEL 15/05/2025) ---
 const DEFAULT_EUROSPIN_MODELS = {
   pizze: {
     id: "pizze",
     title: "Modulo 1: Pizze",
     code: "Modulo 1 - Istr. N. 1",
-    subtitle: "Modulo Scadenze e rintracciabilità gastronomie",
-    dateEmit: "Data Emissione: 2016 Rev.01 del 18/10/2016",
+    subtitle: "Modulo tracciabilità Preparazioni",
+    dateEmit: "Data Emissione: 2016 Rev. 02 del 15/05/2025",
+    pageInfo: "Pagina 1 di 2",
     recipes: [
       {
-        name: "Pizza Diavola",
+        name: "Pizza bianca",
         ingredients: [
-          { name: "Base pizza", supplier: "Menichetti Food" },
-          { name: "Pomodori pelati", supplier: "Delizie del sole" },
-          { name: "Olio evo", supplier: "Amo essere bio" },
-          { name: "Sale iodato", supplier: "Jerez" },
-          { name: "Mozzarella cubettata", supplier: "valcolatt" },
-          { name: "Salame Ventricina", supplier: "Presila" }
+          { name: "Pizza base bianca" },
+          { name: "Olio EVO" },
+          { name: "Sale iodato" },
+          { name: "Rosmarino" }
         ]
       },
       {
-        name: "Pizza capricciosa",
+        name: "Pizza rossa",
         ingredients: [
-          { name: "Base pizza", supplier: "Menichetti Food" },
-          { name: "Pomodori pelati", supplier: "Delizie del sole" },
-          { name: "Olio evo", supplier: "Amo essere bio" },
-          { name: "Sale iodato", supplier: "Jerez" },
-          { name: "Mozzarella cubettata", supplier: "valcolatt" },
-          { name: "Prosciutto crudo", supplier: "montorsi" },
-          { name: "carciofini", supplier: "Delizie del sole" },
-          { name: "Funghi champignon", supplier: "Delizie del sole" },
-          { name: "Olive nere", supplier: "Varia gusto" }
+          { name: "Pizza base bianca" },
+          { name: "Olio EVO" },
+          { name: "Sale iodato" },
+          { name: "Pomodori pelati Delizie dal Sole" }
         ]
       },
       {
-        name: "Pizza stracciatella mortadella",
+        name: "Pizza Margherita",
         ingredients: [
-          { name: "Base pizza", supplier: "Menichetti Food" },
-          { name: "Mortadella", supplier: "montorsi" },
-          { name: "Stracciatella", supplier: "sabelli" },
-          { name: "Olio evo", supplier: "Amo essere bio" },
-          { name: "Granella di pistacchio", supplier: "Selezione natura" }
+          { name: "Pizza base bianca" },
+          { name: "Pomodori pelati Delizie dal Sole" },
+          { name: "Olio EVO" },
+          { name: "Mozzarella Cubettata" },
+          { name: "Sale iodato" },
+          { name: "Basilico" }
         ]
       },
       {
-        name: "Pizza zucchine",
+        name: "Pizza marinara",
         ingredients: [
-          { name: "Base pizza", supplier: "Menichetti Food" },
-          { name: "Olio evo", supplier: "Amo essere bio" },
-          { name: "Sale iodato", supplier: "Jerez" },
-          { name: "Zucchine", supplier: "ortofrutta" }
+          { name: "Pizza base bianca" },
+          { name: "Olio EVO" },
+          { name: "Sale iodato" },
+          { name: "Aglio" },
+          { name: "Origano" },
+          { name: "Pomodori pelati Delizie dal Sole" }
         ]
       },
       {
-        name: "Pizza caprese",
+        name: "Pizza Napoli",
         ingredients: [
-          { name: "Base pizza", supplier: "Menichetti Food" },
-          { name: "Mozzarella di bufala", supplier: "Pascoli italiani" },
-          { name: "Pomodorini", supplier: "La favetta" },
-          { name: "Olio evo", supplier: "Amo essere bio" },
-          { name: "Sale iodato", supplier: "Jerez" },
-          { name: "basilico", supplier: "ortofrutta" }
+          { name: "Pizza base bianca" },
+          { name: "Olio EVO (A.E.E.) Mazara del Vallo" },
+          { name: "Sale iodato" },
+          { name: "Capperi" },
+          { name: "Filetti di acciughe" },
+          { name: "Pomodori pelati Delizie dal Sole" }
+        ]
+      },
+      {
+        name: "Pizza diavola",
+        ingredients: [
+          { name: "Pizza base bianca" },
+          { name: "Olio EVO" },
+          { name: "Sale iodato" },
+          { name: "Mozzarella cubettata" },
+          { name: "Salame ventricina" }
+        ]
+      },
+      {
+        name: "Crostino",
+        ingredients: [
+          { name: "Pizza base bianca" },
+          { name: "Mozzarella cubettata" },
+          { name: "Prosciutto cotto" },
+          { name: "Sale iodato" },
+          { name: "Olio EVO" }
         ]
       }
     ]
@@ -127,6 +87,7 @@ const DEFAULT_EUROSPIN_MODELS = {
     code: "Modulo 1 - Istr. N. 1",
     subtitle: "Modulo Scadenze e rintracciabilità gastronomie",
     dateEmit: "Data Emissione: 2016 Rev.01 del 18/10/2016",
+    pageInfo: "Pagina 1 di 1",
     recipes: [
       {
         name: "Lasagna",
@@ -180,7 +141,7 @@ const DEFAULT_EUROSPIN_MODELS = {
 };
 
 // Database Dexie locale
-const db = new Dexie('EurospinHaccpDB_v2');
+const db = new Dexie('EurospinHaccpDB_v3');
 db.version(1).stores({
   sessions: '++id, date, moduleKey, timestamp',
   customModels: 'key',
@@ -189,7 +150,6 @@ db.version(1).stores({
 
 let activeModels = JSON.parse(JSON.stringify(DEFAULT_EUROSPIN_MODELS));
 let customCompanyLogo = null;
-let geminiApiKey = DEFAULT_GEMINI_API_KEY;
 
 let currentSession = {
   moduleKey: null,
@@ -202,10 +162,11 @@ let currentSession = {
   resultsMap: {}
 };
 
-let activeOcrMode = 'lot'; 
 let cameraStream = null;
 let activeFacingMode = 'environment';
 let ocrWorker = null;
+let continuousScanTimer = null;
+let isScanningFrame = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   setupNavigation();
@@ -224,7 +185,7 @@ function checkOnlineStatus() {
     statusEl.textContent = "Online";
     statusEl.className = "status-indicator online";
   } else {
-    statusEl.textContent = "Offline (Locale)";
+    statusEl.textContent = "Offline";
     statusEl.className = "status-indicator offline";
   }
 }
@@ -240,32 +201,9 @@ async function loadCustomSettingsAndModels() {
       customCompanyLogo = savedLogo.value;
       updateLogoUI(customCompanyLogo);
     }
-    const savedKey = await db.settings.get('geminiApiKey');
-    if (savedKey && savedKey.value) {
-      geminiApiKey = savedKey.value;
-    } else {
-      geminiApiKey = DEFAULT_GEMINI_API_KEY;
-    }
-    document.getElementById('input-gemini-key').value = geminiApiKey;
-    updateGeminiStatusUI(true);
   } catch (e) {
     console.error("Errore caricamento impostazioni custom:", e);
-    geminiApiKey = DEFAULT_GEMINI_API_KEY;
-    updateGeminiStatusUI(true);
   }
-}
-
-function updateGeminiStatusUI(isActive) {
-  const badge = document.getElementById('gemini-status-badge');
-  const aiTag = document.getElementById('scan-ai-mode-tag');
-  const keyStatusText = document.getElementById('gemini-key-status');
-
-  badge.textContent = "✨ Gemini 3.6 AI";
-  badge.className = "ai-badge active";
-  if (aiTag) aiTag.textContent = "✨ Gemini 3.6 Vision AI Active";
-  keyStatusText.textContent = "✓ Chiave Aziendale Gemini attiva di default per tutti gli operatori!";
-  keyStatusText.className = "key-status-text success";
-  keyStatusText.classList.remove('hidden');
 }
 
 function setupNavigation() {
@@ -308,7 +246,7 @@ function startRecipeSelection(moduleKey) {
   currentSession.moduleKey = moduleKey;
   const model = activeModels[moduleKey];
 
-  document.getElementById('recipe-selection-title').textContent = `${model.title} - Ricette Oggi`;
+  document.getElementById('recipe-selection-title').textContent = `${model.title} - Preparazioni del Giorno`;
   const listContainer = document.getElementById('recipe-checkbox-list');
   listContainer.innerHTML = '';
 
@@ -357,7 +295,7 @@ function startWizardScanning() {
       currentSession.flatSteps.push({
         recipeName: recipe.name,
         ingredientName: ing.name,
-        supplierName: ing.supplier,
+        supplierName: ing.supplier || "",
         key: `${recipe.name}_${ing.name}`
       });
     });
@@ -367,7 +305,6 @@ function startWizardScanning() {
   document.getElementById('wizard-step-active').classList.remove('hidden');
 
   startSessionTimer();
-  setOcrMode('lot');
   showCurrentWizardStep();
   startCamera();
 }
@@ -385,34 +322,19 @@ function startSessionTimer() {
   }, 1000);
 }
 
-function setOcrMode(mode) {
-  activeOcrMode = mode;
-  const indicator = document.getElementById('scan-step-indicator');
-  const targetBox = document.getElementById('scan-target-box');
-  const targetLabel = document.getElementById('scan-target-label');
-  const captureLabel = document.getElementById('btn-capture-label');
-
-  if (mode === 'lot') {
-    indicator.textContent = "PASSO 1: Scansiona il Codice LOTTO";
-    indicator.className = "scan-step-badge step-1";
-    targetBox.className = "scan-target-box step-1-mode";
-    targetLabel.textContent = "Inquadra il Codice Lotto o Scadenza";
-    captureLabel.textContent = "Analizza con Gemini AI";
-  } else {
-    indicator.textContent = "PASSO 2: Scansiona la Data di SCADENZA";
-    indicator.className = "scan-step-badge step-2";
-    targetBox.className = "scan-target-box step-2-mode";
-    targetLabel.textContent = "Inquadra la Data di Scadenza";
-    captureLabel.textContent = "Analizza con Gemini AI";
-  }
-}
-
 function showCurrentWizardStep() {
   const step = currentSession.flatSteps[currentSession.currentIndex];
   
   document.getElementById('current-recipe-name').textContent = step.recipeName;
   document.getElementById('current-ingredient-name').textContent = step.ingredientName;
-  document.getElementById('current-supplier-name').textContent = step.supplierName || "—";
+  
+  const supplierWrapper = document.getElementById('supplier-badge-wrapper');
+  if (step.supplierName) {
+    document.getElementById('current-supplier-name').textContent = step.supplierName;
+    supplierWrapper.style.display = 'block';
+  } else {
+    supplierWrapper.style.display = 'none';
+  }
   
   document.getElementById('current-step-index').textContent = `#${currentSession.currentIndex + 1}`;
   document.getElementById('wizard-step-badge').textContent = `Passo ${currentSession.currentIndex + 1} di ${currentSession.flatSteps.length}`;
@@ -424,9 +346,6 @@ function showCurrentWizardStep() {
   document.getElementById('input-expiry-date').value = '';
   document.getElementById('btn-clear-lot').classList.add('hidden');
   document.getElementById('btn-clear-expiry').classList.add('hidden');
-  document.getElementById('gemini-result-info').classList.add('hidden');
-
-  setOcrMode('lot');
 
   const existingMemory = currentSession.scannedLotsMemory[step.ingredientName];
   const smartBanner = document.getElementById('smart-reuse-banner');
@@ -446,7 +365,9 @@ function applySmartReuse() {
   const memory = currentSession.scannedLotsMemory[step.ingredientName];
   if (memory) {
     document.getElementById('input-lot-code').value = memory.lotCode || '';
-    document.getElementById('input-expiry-date').value = memory.expiryDate || '';
+    if (memory.expiryDate) {
+      document.getElementById('input-expiry-date').value = convertToIsoDate(memory.expiryDate);
+    }
     document.getElementById('btn-clear-lot').classList.remove('hidden');
     document.getElementById('btn-clear-expiry').classList.remove('hidden');
   }
@@ -455,7 +376,8 @@ function applySmartReuse() {
 function nextWizardStep(isSkipped) {
   const step = currentSession.flatSteps[currentSession.currentIndex];
   const lotVal = document.getElementById('input-lot-code').value.trim();
-  const expiryVal = document.getElementById('input-expiry-date').value.trim();
+  const expiryValRaw = document.getElementById('input-expiry-date').value.trim();
+  const expiryVal = formatIsoToItalianDisplay(expiryValRaw);
 
   const resultObj = {
     recipeName: step.recipeName,
@@ -529,7 +451,7 @@ function resetWizardToStart() {
 }
 
 
-// --- TELECAMERA & OCR CON INTEGRAZIONE GEMINI 3.6 VISION AI ---
+// --- TELECAMERA CON SCANSIONE CONTINUA IN TEMPO REALE & FALLBACK FOTO ---
 async function startCamera() {
   stopCamera();
   const notice = document.getElementById('camera-fallback-notice');
@@ -542,6 +464,10 @@ async function startCamera() {
     });
     video.srcObject = cameraStream;
     notice.classList.add('hidden');
+
+    // Avvio ciclo di scansione continua in tempo reale ogni 750ms
+    if (continuousScanTimer) clearInterval(continuousScanTimer);
+    continuousScanTimer = setInterval(performContinuousScan, 750);
   } catch (err) {
     console.warn("Fotocamera live non disponibile (HTTP o permessi):", err);
     notice.classList.remove('hidden');
@@ -549,6 +475,10 @@ async function startCamera() {
 }
 
 function stopCamera() {
+  if (continuousScanTimer) {
+    clearInterval(continuousScanTimer);
+    continuousScanTimer = null;
+  }
   if (cameraStream) {
     cameraStream.getTracks().forEach(t => t.stop());
     cameraStream = null;
@@ -561,20 +491,30 @@ function toggleCameraLens() {
   startCamera();
 }
 
-async function captureAndRecognizeText() {
-  if (!cameraStream) {
-    document.getElementById('input-ocr-file').click();
-    return;
-  }
-  
+// SCANSIONE CONTINUA AUTOMATICA IN TEMPO REALE (SENZA NESSUN POPUP DI ERRORE)
+async function performContinuousScan() {
+  if (!cameraStream || isScanningFrame) return;
   const video = document.getElementById('scanner-video');
-  const canvas = document.createElement('canvas');
-  canvas.width = video.videoWidth || 1280;
-  canvas.height = video.videoHeight || 720;
-  const ctx = canvas.getContext('2d');
+  if (!video || video.readyState < 2) return;
 
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-  processCanvasAndRecognize(canvas);
+  isScanningFrame = true;
+
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth * 0.92;
+    canvas.height = video.videoHeight * 0.72;
+    const ctx = canvas.getContext('2d');
+
+    const cropX = (video.videoWidth - canvas.width) / 2;
+    const cropY = (video.videoHeight - canvas.height) / 2;
+    ctx.drawImage(video, cropX, cropY, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+
+    await processCanvasAndRecognize(canvas, false);
+  } catch (e) {
+    // Ignora silenciosamente eventuali errori di frame per mantenere la scansione fluida
+  } finally {
+    isScanningFrame = false;
+  }
 }
 
 function handleFilePhotoCapture(e) {
@@ -590,158 +530,40 @@ function handleFilePhotoCapture(e) {
       canvas.height = img.height;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0);
-      processCanvasAndRecognize(canvas);
+      processCanvasAndRecognize(canvas, true);
     };
     img.src = evt.target.result;
   };
   reader.readAsDataURL(file);
 }
 
-// CHIAMATA API DIRETTA A GEMINI 3.6 VISION AI CON TEMPERATURE 0.1 E JSON SCHEMA
-async function callGeminiVisionAPI(base64DataUrl) {
-  const keyToUse = geminiApiKey || DEFAULT_GEMINI_API_KEY;
-  const pureBase64 = base64DataUrl.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
-
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${keyToUse}`;
-
-  const requestPayload = {
-    contents: [
-      {
-        parts: [
-          { text: GEMINI_SYSTEM_PROMPT },
-          {
-            inline_data: {
-              mime_type: "image/jpeg",
-              data: pureBase64
-            }
-          }
-        ]
-      }
-    ],
-    generationConfig: {
-      temperature: 0.1,
-      response_mime_type: "application/json"
-    }
-  };
-
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(requestPayload)
-  });
-
-  if (!response.ok) {
-    const errJson = await response.json().catch(() => ({}));
-    throw new Error(errJson.error?.message || `Errore API Gemini (${response.status})`);
-  }
-
-  const resJson = await response.json();
-  const rawResponseText = resJson.candidates?.[0]?.content?.parts?.[0]?.text;
-  
-  if (!rawResponseText) throw new Error("Nessuna risposta generata da Gemini AI.");
-
-  return JSON.parse(rawResponseText);
-}
-
-// ELABORAZIONE IMMAGINE: GEMINI 3.6 VISION AI (CON FALLBACK LOCALE TESSERACT)
-async function processCanvasAndRecognize(canvas) {
-  const loader = document.getElementById('scanner-loader');
-  const loaderText = document.getElementById('scanner-loader-text');
-  const infoBox = document.getElementById('gemini-result-info');
-  const infoDetails = document.getElementById('gemini-info-details');
-  const scoreBadge = document.getElementById('gemini-score-badge');
-  const targetBox = document.getElementById('scan-target-box');
-
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-
-  loaderText.textContent = "✨ Analisi AI Gemini 3.6 (Vision)...";
-  loader.classList.remove('hidden');
-
-  try {
-    const aiResponse = await callGeminiVisionAPI(dataUrl);
-    console.log("Risposta Gemini 3.6 AI:", aiResponse);
-
-    targetBox.classList.add('success');
-    setTimeout(() => targetBox.classList.remove('success'), 600);
-
-    const detection = aiResponse.detection || {};
-    const expObj = detection.expiration_date || {};
-    const lotObj = detection.lot_number || {};
-
-    const inputLot = document.getElementById('input-lot-code');
-    const inputExp = document.getElementById('input-expiry-date');
-
-    let lotVal = lotObj.parsed_lot || parseLotCode(lotObj.raw_text || "");
-    let expVal = expObj.parsed_date || parseExpiryDate(expObj.raw_text || "");
-
-    let lotFilled = false;
-    let expFilled = false;
-
-    if (lotVal) {
-      inputLot.value = lotVal;
-      document.getElementById('btn-clear-lot').classList.remove('hidden');
-      lotFilled = true;
-    }
-
-    if (expVal) {
-      inputExp.value = formatISOToItalianDate(expVal);
-      document.getElementById('btn-clear-expiry').classList.remove('hidden');
-      expFilled = true;
-    }
-
-    const score = Math.round((aiResponse.readability_score || 0.9) * 100);
-    scoreBadge.textContent = `Leggibilità: ${score}%`;
-
-    const tech = aiResponse.technical_analysis || {};
-    infoDetails.innerHTML = `
-      <div><strong>Stampa:</strong> ${tech.print_technology || 'Standard/Dot-Matrix'} &bull; <strong>Superficie:</strong> ${tech.packaging_surface || 'Packaging'}</div>
-      <div><strong>Lotto estratto:</strong> ${lotVal || 'Non rilevato'} &bull; <strong>Scadenza:</strong> ${expVal || 'Non rilevata'}</div>
-    `;
-    infoBox.classList.remove('hidden');
-
-    if (lotFilled) {
-      setOcrMode('expiry');
-    }
-
-    if (!lotFilled && !expFilled) {
-      alert("Gemini 3.6 non ha individuato lotti o scadenze in questa inquadratura. Riprova scattando da più vicino.");
-    }
-
-  } catch (err) {
-    console.error("Errore Chiamata Gemini AI:", err);
-    alert(`Errore Gemini AI: ${err.message}. Passo al motore OCR locale...`);
-    runLocalTesseractOCR(canvas);
-  } finally {
-    loader.classList.add('hidden');
-  }
-}
-
-// MOTORE OCR LOCALE TESSERACT (FALLBACK DI RISERVA)
-async function runLocalTesseractOCR(canvas) {
-  const loader = document.getElementById('scanner-loader');
-  const loaderText = document.getElementById('scanner-loader-text');
-  const targetBox = document.getElementById('scan-target-box');
-
+// PROCESSO OCR UNIFICATO SILENZIOSO (NESSUN ALERT / POPUP DI ERRORE)
+async function processCanvasAndRecognize(canvas, isFileSource) {
   if (!ocrWorker) {
-    loaderText.textContent = "Inizializzazione OCR Locale...";
-    loader.classList.remove('hidden');
     ocrWorker = await Tesseract.createWorker('ita');
     await ocrWorker.setParameters({
       tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz./- '
     });
   }
 
-  loaderText.textContent = "Lettura OCR Locale...";
-  loader.classList.remove('hidden');
+  const ctx = canvas.getContext('2d');
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imgData.data;
 
+  // Grayscale + contrast per caratteri puntinati
+  for (let i = 0; i < data.length; i += 4) {
+    const gray = 0.3 * data[i] + 0.59 * data[i + 1] + 0.11 * data[i + 2];
+    const val = (gray > 115) ? 255 : 0;
+    data[i] = val; data[i + 1] = val; data[i + 2] = val;
+  }
+
+  ctx.putImageData(imgData, 0, 0);
   const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
 
   try {
     const result = await ocrWorker.recognize(dataUrl);
     const rawText = result.data.text;
-    
-    targetBox.classList.add('success');
-    setTimeout(() => targetBox.classList.remove('success'), 600);
+    if (!rawText) return;
 
     const detectedExpiry = parseExpiryDate(rawText);
     const detectedLot = parseLotCode(rawText);
@@ -752,41 +574,26 @@ async function runLocalTesseractOCR(canvas) {
     let lotFilled = false;
     let expFilled = false;
 
-    if (detectedLot !== "") {
+    if (detectedLot && inputLot.value === '') {
       inputLot.value = detectedLot;
       document.getElementById('btn-clear-lot').classList.remove('hidden');
       lotFilled = true;
     }
 
-    if (detectedExpiry !== "") {
-      inputExp.value = detectedExpiry;
+    if (detectedExpiry && inputExp.value === '') {
+      inputExp.value = convertToIsoDate(detectedExpiry);
       document.getElementById('btn-clear-expiry').classList.remove('hidden');
       expFilled = true;
     }
 
-    if (lotFilled) setOcrMode('expiry');
-
-    if (!lotFilled && !expFilled) {
-      alert("Nessun lotto o scadenza letto con OCR locale.");
+    if (lotFilled || expFilled) {
+      const targetBox = document.getElementById('scan-target-box');
+      targetBox.classList.add('success');
+      setTimeout(() => targetBox.classList.remove('success'), 600);
     }
   } catch (err) {
-    console.error("Errore OCR Locale:", err);
-  } finally {
-    loader.classList.add('hidden');
+    console.error("Errore OCR:", err);
   }
-}
-
-function formatISOToItalianDate(dateStr) {
-  if (!dateStr) return "";
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-    const [y, m, d] = dateStr.split('-');
-    return `${d}/${m}/${y}`;
-  }
-  if (/^\d{4}-\d{2}$/.test(dateStr)) {
-    const [y, m] = dateStr.split('-');
-    return `${m}/${y}`;
-  }
-  return dateStr.replace(/[\.-]/g, '/');
 }
 
 function parseLotCode(text) {
@@ -816,41 +623,28 @@ function parseExpiryDate(text) {
   return "";
 }
 
+function convertToIsoDate(dateStr) {
+  if (!dateStr) return "";
+  // Se è gg/mm/aaaa -> converte in YYYY-MM-DD per l'input type="date"
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
+    const [d, m, y] = dateStr.split('/');
+    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  }
+  // Se è mm/aaaa -> converte in YYYY-MM-01
+  if (/^\d{1,2}\/\d{4}$/.test(dateStr)) {
+    const [m, y] = dateStr.split('/');
+    return `${y}-${String(m).padStart(2, '0')}-01`;
+  }
+  return dateStr;
+}
 
-// --- GESTIONE CHIAVE API GEMINI NELLE IMPOSTAZIONI ---
-function setupGeminiApiKeyHandler() {
-  const inputKey = document.getElementById('input-gemini-key');
-  const btnSave = document.getElementById('btn-save-gemini-key');
-  const btnToggle = document.getElementById('btn-toggle-show-key');
-
-  btnSave.addEventListener('click', async () => {
-    const keyVal = inputKey.value.trim();
-    if (!keyVal) {
-      if (confirm("Ripristinare la chiave aziendale predefinita di Gemini?")) {
-        geminiApiKey = DEFAULT_GEMINI_API_KEY;
-        await db.settings.delete('geminiApiKey');
-        inputKey.value = geminiApiKey;
-        updateGeminiStatusUI(true);
-        alert("Chiave aziendale predefinita ripristinata!");
-      }
-      return;
-    }
-
-    geminiApiKey = keyVal;
-    await db.settings.put({ key: 'geminiApiKey', value: keyVal });
-    updateGeminiStatusUI(true);
-    alert("✨ Chiave API Gemini salvata con successo! L'intelligenza artificiale è attiva.");
-  });
-
-  btnToggle.addEventListener('click', () => {
-    if (inputKey.type === 'password') {
-      inputKey.type = 'text';
-      btnToggle.textContent = 'Nascondi';
-    } else {
-      inputKey.type = 'password';
-      btnToggle.textContent = 'Mostra';
-    }
-  });
+function formatIsoToItalianDisplay(isoStr) {
+  if (!isoStr) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(isoStr)) {
+    const [y, m, d] = isoStr.split('-');
+    return `${d}/${m}/${y}`;
+  }
+  return isoStr;
 }
 
 
@@ -921,7 +715,7 @@ function renderRecipeEditorUI() {
       ingHTML += `
         <div class="editor-ingredient-row">
           <input type="text" class="inp-ing-name" value="${ing.name}" data-r="${rIndex}" data-i="${iIndex}" placeholder="Nome ingrediente">
-          <input type="text" class="inp-ing-supplier" value="${ing.supplier || ''}" data-r="${rIndex}" data-i="${iIndex}" placeholder="Fornitore">
+          <input type="text" class="inp-ing-supplier" value="${ing.supplier || ''}" data-r="${rIndex}" data-i="${iIndex}" placeholder="Fornitore (opzionale)">
           <button class="btn-text-action delete btn-del-ing" data-r="${rIndex}" data-i="${iIndex}">✕</button>
         </div>
       `;
@@ -929,10 +723,10 @@ function renderRecipeEditorUI() {
 
     card.innerHTML = `
       <div class="editor-recipe-header">
-        <input type="text" class="inp-recipe-name" value="${recipe.name}" data-r="${rIndex}" style="font-weight:bold; font-size:15px; background:none; border:1px solid var(--glass-border); color:#fff; padding:4px 8px; border-radius:6px;">
+        <input type="text" class="inp-recipe-name" value="${recipe.name}" data-r="${rIndex}" style="font-weight:bold; font-size:14px; background:none; border:1px solid var(--glass-border); color:#fff; padding:4px 8px; border-radius:4px;">
         <button class="btn-text-action delete btn-del-recipe" data-r="${rIndex}">Elimina Piatto</button>
       </div>
-      <div class="editor-ingredients-list" style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
+      <div class="editor-ingredients-list" style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
         ${ingHTML}
       </div>
       <button class="btn btn-secondary btn-sm btn-add-ing-row" data-r="${rIndex}" style="margin-top:8px;">+ Aggiungi Ingrediente</button>
@@ -958,7 +752,7 @@ function renderRecipeEditorUI() {
   container.querySelectorAll('.btn-add-ing-row').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const r = parseInt(e.target.getAttribute('data-r'));
-      model.recipes[r].ingredients.push({ name: "Nuovo Ingrediente", supplier: "Nuovo Fornitore" });
+      model.recipes[r].ingredients.push({ name: "Nuovo Ingrediente" });
       saveCustomModelsDB();
       renderRecipeEditorUI();
     });
@@ -992,7 +786,9 @@ function saveEditorChanges() {
       const nameInp = row.querySelector('.inp-ing-name');
       const supplierInp = row.querySelector('.inp-ing-supplier');
       model.recipes[rIndex].ingredients[iIndex].name = nameInp.value.trim();
-      model.recipes[rIndex].ingredients[iIndex].supplier = supplierInp.value.trim();
+      if (supplierInp) {
+        model.recipes[rIndex].ingredients[iIndex].supplier = supplierInp.value.trim();
+      }
     });
   });
 
@@ -1004,13 +800,16 @@ async function saveCustomModelsDB() {
 }
 
 
-// --- RENDER FOGLIO 1:1 STAMPABILE ---
+// --- RENDER FOGLIO 1:1 STAMPABILE CON STRUTTURA EUROSPIN UFFICIALE ---
 function renderEurospinPaperSheet(sessionData) {
   const modelKey = sessionData.moduleKey || "pizze";
   const model = activeModels[modelKey];
   const resultsMap = sessionData.resultsMap || {};
 
   document.getElementById('print-date-field').textContent = sessionData.date || formatDate(new Date());
+  document.getElementById('paper-subtitle').textContent = model.subtitle || "Modulo tracciabilità Preparazioni";
+  document.getElementById('paper-emit-info').textContent = model.dateEmit || "Data Emissione: 2016 Rev. 02 del 15/05/2025";
+  document.getElementById('paper-page-info').textContent = model.pageInfo || "Pagina 1 di 2";
   
   const logoContainer = document.getElementById('paper-logo-container');
   if (customCompanyLogo) {
@@ -1018,7 +817,7 @@ function renderEurospinPaperSheet(sessionData) {
   } else {
     logoContainer.innerHTML = `
       <div class="eurospin-logo-box">
-        <span class="logo-top">★ EURO ★</span>
+        <span class="logo-top">EURO</span>
         <span class="logo-bottom">Spin</span>
       </div>`;
   }
@@ -1026,14 +825,14 @@ function renderEurospinPaperSheet(sessionData) {
   const table = document.getElementById('paper-data-table');
   table.innerHTML = '';
 
-  const isGastro = (modelKey === 'gastronomia');
+  const hasSuppliers = model.recipes.some(r => r.ingredients.some(i => i.supplier && i.supplier.trim() !== ""));
   
   let headerHTML = `
     <thead>
       <tr>
-        <th style="width: 25%;">${isGastro ? "Prodotto / Ricetta" : "Prodotto (Ricetta)"}</th>
-        <th style="width: 25%;">Ingrediente</th>
-        <th style="width: 20%;">Fornitore</th>
+        <th style="width: 25%;">Prodotto</th>
+        <th style="width: ${hasSuppliers ? '30%' : '45%'};">Ingredienti</th>
+        ${hasSuppliers ? '<th style="width: 15%;">Fornitore</th>' : ''}
         <th style="width: 15%;">Lotto</th>
         <th style="width: 15%;">Scadenza</th>
       </tr>
@@ -1059,9 +858,11 @@ function renderEurospinPaperSheet(sessionData) {
         tbodyHTML += `<td class="cell-recipe" rowspan="${ingCount}">${recipe.name}</td>`;
       }
 
+      tbodyHTML += `<td class="cell-product">${ing.name}</td>`;
+      if (hasSuppliers) {
+        tbodyHTML += `<td class="cell-supplier">${ing.supplier || "—"}</td>`;
+      }
       tbodyHTML += `
-        <td class="cell-product">${ing.name}</td>
-        <td class="cell-supplier">${ing.supplier || "—"}</td>
         <td class="cell-lot">${lotDisplay}</td>
         <td class="cell-expiry">${expDisplay}</td>
       </tr>`;
@@ -1091,12 +892,12 @@ function exportSessionToExcel(sessionData) {
   const resultsMap = sessionData.resultsMap || {};
 
   const rows = [];
-  rows.push(["ISTRUZIONE OPERATIVE INTERNE", "", "", "Data Emissione: 2016 Rev.01 del 18/10/2016"]);
-  rows.push([model.subtitle, "", "", "Pagina 1 di 1"]);
+  rows.push(["ISTRUZIONE OPERATIVE INTERNE", "", "", model.dateEmit || "Data Emissione: 2016 Rev. 02 del 15/05/2025"]);
+  rows.push([model.subtitle || "Modulo tracciabilità Preparazioni", "", "", model.pageInfo || "Pagina 1 di 2"]);
   rows.push([`Data: ${sessionData.date || formatDate(new Date())}`]);
   rows.push([]);
 
-  rows.push(["Prodotto / Ricetta", "Ingrediente", "Fornitore", "Lotto", "Scadenza"]);
+  rows.push(["Prodotto", "Ingredienti", "Lotto", "Scadenza"]);
 
   model.recipes.forEach((recipe, rIndex) => {
     const isPreparedToday = sessionData.selectedRecipes ? sessionData.selectedRecipes.includes(rIndex) : true;
@@ -1108,7 +909,6 @@ function exportSessionToExcel(sessionData) {
       rows.push([
         recipe.name,
         ing.name,
-        ing.supplier || "",
         (isPreparedToday && result) ? result.lotCode : "",
         (isPreparedToday && result) ? result.expiryDate : ""
       ]);
@@ -1120,9 +920,9 @@ function exportSessionToExcel(sessionData) {
 
   const worksheet = XLSX.utils.aoa_to_sheet(rows);
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Rintracciabilità");
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Tracciabilità");
 
-  worksheet['!cols'] = [{ wch: 25 }, { wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 15 }];
+  worksheet['!cols'] = [{ wch: 25 }, { wch: 35 }, { wch: 18 }, { wch: 18 }];
   XLSX.writeFile(workbook, `Eurospin_${modelKey}_${(sessionData.date || formatDate(new Date())).replace(/\//g, '-')}.xlsx`);
 }
 
@@ -1153,7 +953,6 @@ function setupEventListeners() {
   document.getElementById('btn-abort-session').addEventListener('click', resetWizardToStart);
   document.getElementById('btn-restart-wizard').addEventListener('click', resetWizardToStart);
 
-  document.getElementById('btn-capture').addEventListener('click', captureAndRecognizeText);
   document.getElementById('btn-file-capture').addEventListener('click', () => {
     document.getElementById('input-ocr-file').click();
   });
@@ -1176,7 +975,6 @@ function setupEventListeners() {
     exportSessionToExcel(currentData);
   });
 
-  setupGeminiApiKeyHandler();
   setupCompanyLogoUploader();
 
   document.getElementById('select-editor-module').addEventListener('change', renderRecipeEditorUI);
@@ -1184,18 +982,18 @@ function setupEventListeners() {
     const moduleKey = document.getElementById('select-editor-module').value;
     activeModels[moduleKey].recipes.push({
       name: "Nuova Ricetta",
-      ingredients: [{ name: "Ingrediente 1", supplier: "Fornitore 1" }]
+      ingredients: [{ name: "Nuovo Ingrediente" }]
     });
     saveCustomModelsDB();
     renderRecipeEditorUI();
   });
 
   document.getElementById('btn-reset-models').addEventListener('click', async () => {
-    if (confirm("Ripristinare i modelli e i fornitori predefiniti originali Eurospin?")) {
+    if (confirm("Ripristinare i modelli e i dati originali Eurospin?")) {
       activeModels = JSON.parse(JSON.stringify(DEFAULT_EUROSPIN_MODELS));
       await db.customModels.delete('models');
       renderRecipeEditorUI();
-      alert("Fornitori predefiniti ripristinati!");
+      alert("Modelli predefiniti ripristinati!");
     }
   });
 
