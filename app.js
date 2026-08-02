@@ -141,7 +141,7 @@ const DEFAULT_EUROSPIN_MODELS = {
 };
 
 // Database Dexie locale
-const db = new Dexie('EurospinHaccpDB_v3');
+const db = new Dexie('EurospinHaccpDB_v4');
 db.version(1).stores({
   sessions: '++id, date, moduleKey, timestamp',
   customModels: 'key',
@@ -162,11 +162,14 @@ let currentSession = {
   resultsMap: {}
 };
 
+// Stato a 2 Passi ('lot' = Passo 1 Lotto, 'exp' = Passo 2 Scadenza)
+let activeStep = 'lot';
+
 let cameraStream = null;
 let activeFacingMode = 'environment';
 let ocrWorker = null;
-let continuousScanTimer = null;
-let isScanningFrame = false;
+let isFrozenFrame = false;
+let pendingDetectedText = "";
 
 document.addEventListener('DOMContentLoaded', async () => {
   setupNavigation();
@@ -305,6 +308,7 @@ function startWizardScanning() {
   document.getElementById('wizard-step-active').classList.remove('hidden');
 
   startSessionTimer();
+  setActiveStep('lot');
   showCurrentWizardStep();
   startCamera();
 }
@@ -320,6 +324,26 @@ function startSessionTimer() {
     const s = String(seconds % 60).padStart(2, '0');
     timerEl.textContent = `${m}:${s}`;
   }, 1000);
+}
+
+// GESTIONE DEI PULSANTI DEDICATI A 2 PASSI
+function setActiveStep(step) {
+  activeStep = step;
+  const btnLot = document.getElementById('btn-step-lot');
+  const btnExp = document.getElementById('btn-step-exp');
+  const indicator = document.getElementById('scan-step-indicator');
+
+  if (step === 'lot') {
+    btnLot.className = "btn-step step-1-active";
+    btnExp.className = "btn-step";
+    indicator.textContent = "PASSO 1: Seleziona Codice LOTTO";
+    indicator.className = "scan-step-badge step-1";
+  } else {
+    btnLot.className = "btn-step";
+    btnExp.className = "btn-step step-2-active";
+    indicator.textContent = "PASSO 2: Seleziona Data SCADENZA";
+    indicator.className = "scan-step-badge step-2";
+  }
 }
 
 function showCurrentWizardStep() {
@@ -346,6 +370,9 @@ function showCurrentWizardStep() {
   document.getElementById('input-expiry-date').value = '';
   document.getElementById('btn-clear-lot').classList.add('hidden');
   document.getElementById('btn-clear-expiry').classList.add('hidden');
+
+  unfreezeCamera();
+  setActiveStep('lot');
 
   const existingMemory = currentSession.scannedLotsMemory[step.ingredientName];
   const smartBanner = document.getElementById('smart-reuse-banner');
@@ -451,7 +478,7 @@ function resetWizardToStart() {
 }
 
 
-// --- TELECAMERA CON SCANSIONE CONTINUA IN TEMPO REALE & FALLBACK FOTO ---
+// --- TELECAMERA & OCR INTERATTIVO A FERMO IMMAGINE (STILE IPHONE) ---
 async function startCamera() {
   stopCamera();
   const notice = document.getElementById('camera-fallback-notice');
@@ -464,10 +491,6 @@ async function startCamera() {
     });
     video.srcObject = cameraStream;
     notice.classList.add('hidden');
-
-    // Avvio ciclo di scansione continua in tempo reale ogni 750ms
-    if (continuousScanTimer) clearInterval(continuousScanTimer);
-    continuousScanTimer = setInterval(performContinuousScan, 750);
   } catch (err) {
     console.warn("Fotocamera live non disponibile (HTTP o permessi):", err);
     notice.classList.remove('hidden');
@@ -475,10 +498,6 @@ async function startCamera() {
 }
 
 function stopCamera() {
-  if (continuousScanTimer) {
-    clearInterval(continuousScanTimer);
-    continuousScanTimer = null;
-  }
   if (cameraStream) {
     cameraStream.getTracks().forEach(t => t.stop());
     cameraStream = null;
@@ -491,32 +510,40 @@ function toggleCameraLens() {
   startCamera();
 }
 
-// SCANSIONE CONTINUA AUTOMATICA IN TEMPO REALE (SENZA NESSUN POPUP DI ERRORE)
-async function performContinuousScan() {
-  if (!cameraStream || isScanningFrame) return;
-  const video = document.getElementById('scanner-video');
-  if (!video || video.readyState < 2) return;
-
-  isScanningFrame = true;
-
-  try {
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth * 0.92;
-    canvas.height = video.videoHeight * 0.72;
-    const ctx = canvas.getContext('2d');
-
-    const cropX = (video.videoWidth - canvas.width) / 2;
-    const cropY = (video.videoHeight - canvas.height) / 2;
-    ctx.drawImage(video, cropX, cropY, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
-
-    await processCanvasAndRecognize(canvas, false);
-  } catch (e) {
-    // Ignora silenciosamente eventuali errori di frame per mantenere la scansione fluida
-  } finally {
-    isScanningFrame = false;
-  }
+function unfreezeCamera() {
+  isFrozenFrame = false;
+  document.getElementById('freeze-canvas').classList.add('hidden');
+  document.getElementById('text-highlight-layer').classList.add('hidden');
+  document.getElementById('text-highlight-layer').innerHTML = '';
+  document.getElementById('btn-unfreeze-camera').classList.add('hidden');
+  document.getElementById('scan-target-box').classList.remove('hidden');
+  document.getElementById('ocr-confirm-modal').classList.add('hidden');
 }
 
+// SCATTA E CONGELA IL FRAME PER SELEZIONARE IL TESTO
+async function freezeCameraAndRecognize() {
+  if (!cameraStream) {
+    document.getElementById('input-ocr-file').click();
+    return;
+  }
+  
+  const video = document.getElementById('scanner-video');
+  const canvas = document.getElementById('freeze-canvas');
+  canvas.width = video.videoWidth || 1280;
+  canvas.height = video.videoHeight || 720;
+  const ctx = canvas.getContext('2d');
+
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  
+  canvas.classList.remove('hidden');
+  document.getElementById('scan-target-box').classList.add('hidden');
+  document.getElementById('btn-unfreeze-camera').classList.remove('hidden');
+  isFrozenFrame = true;
+
+  await analyzeAndRenderTextHighlights(canvas);
+}
+
+// FIX CORREZIONE CARICAMENTO DA GALLERIA
 function handleFilePhotoCapture(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -524,21 +551,34 @@ function handleFilePhotoCapture(e) {
   const reader = new FileReader();
   reader.onload = (evt) => {
     const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
+    img.onload = async () => {
+      const canvas = document.getElementById('freeze-canvas');
       canvas.width = img.width;
       canvas.height = img.height;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0);
-      processCanvasAndRecognize(canvas, true);
+
+      canvas.classList.remove('hidden');
+      document.getElementById('scan-target-box').classList.add('hidden');
+      document.getElementById('btn-unfreeze-camera').classList.remove('hidden');
+      isFrozenFrame = true;
+
+      await analyzeAndRenderTextHighlights(canvas);
     };
     img.src = evt.target.result;
   };
   reader.readAsDataURL(file);
 }
 
-// PROCESSO OCR UNIFICATO SILENZIOSO (NESSUN ALERT / POPUP DI ERRORE)
-async function processCanvasAndRecognize(canvas, isFileSource) {
+// RICONOSCIMENTO TESTO CON RENDERING RIQUADRI EVIDENZIATI EVIDENZIABILI TOCCABILI
+async function analyzeAndRenderTextHighlights(canvas) {
+  const loader = document.getElementById('scanner-loader');
+  const loaderText = document.getElementById('scanner-loader-text');
+  const highlightLayer = document.getElementById('text-highlight-layer');
+
+  loaderText.textContent = "Analisi e ricerca testo sulla confezione...";
+  loader.classList.remove('hidden');
+
   if (!ocrWorker) {
     ocrWorker = await Tesseract.createWorker('ita');
     await ocrWorker.setParameters({
@@ -546,54 +586,92 @@ async function processCanvasAndRecognize(canvas, isFileSource) {
     });
   }
 
-  const ctx = canvas.getContext('2d');
-  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const data = imgData.data;
-
-  // Grayscale + contrast per caratteri puntinati
-  for (let i = 0; i < data.length; i += 4) {
-    const gray = 0.3 * data[i] + 0.59 * data[i + 1] + 0.11 * data[i + 2];
-    const val = (gray > 115) ? 255 : 0;
-    data[i] = val; data[i + 1] = val; data[i + 2] = val;
-  }
-
-  ctx.putImageData(imgData, 0, 0);
   const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
 
   try {
     const result = await ocrWorker.recognize(dataUrl);
-    const rawText = result.data.text;
-    if (!rawText) return;
+    const words = result.data.words || [];
 
-    const detectedExpiry = parseExpiryDate(rawText);
-    const detectedLot = parseLotCode(rawText);
+    highlightLayer.innerHTML = '';
+    highlightLayer.classList.remove('hidden');
 
-    const inputLot = document.getElementById('input-lot-code');
-    const inputExp = document.getElementById('input-expiry-date');
+    const wrapper = document.getElementById('scanner-wrapper');
+    const scaleX = wrapper.clientWidth / canvas.width;
+    const scaleY = wrapper.clientHeight / canvas.height;
 
-    let lotFilled = false;
-    let expFilled = false;
+    let foundCount = 0;
 
-    if (detectedLot && inputLot.value === '') {
-      inputLot.value = detectedLot;
-      document.getElementById('btn-clear-lot').classList.remove('hidden');
-      lotFilled = true;
-    }
+    words.forEach(word => {
+      const text = word.text.trim();
+      if (text.length < 2) return;
 
-    if (detectedExpiry && inputExp.value === '') {
-      inputExp.value = convertToIsoDate(detectedExpiry);
-      document.getElementById('btn-clear-expiry').classList.remove('hidden');
-      expFilled = true;
-    }
+      const bbox = word.bbox;
+      const left = bbox.x0 * scaleX;
+      const top = bbox.y0 * scaleY;
+      const width = (bbox.x1 - bbox.x0) * scaleX;
+      const height = (bbox.y1 - bbox.y0) * scaleY;
 
-    if (lotFilled || expFilled) {
-      const targetBox = document.getElementById('scan-target-box');
-      targetBox.classList.add('success');
-      setTimeout(() => targetBox.classList.remove('success'), 600);
+      const boxEl = document.createElement('div');
+      boxEl.className = 'ocr-word-box';
+      boxEl.style.left = `${left}px`;
+      boxEl.style.top = `${top}px`;
+      boxEl.style.width = `${width}px`;
+      boxEl.style.height = `${height}px`;
+
+      boxEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showConfirmModal(text);
+      });
+
+      highlightLayer.appendChild(boxEl);
+      foundCount++;
+    });
+
+    if (foundCount === 0) {
+      // Se nessun riquadro specifico è stato trovato, permetti il tocco generico sul testo
+      const rawText = result.data.text.trim();
+      if (rawText) {
+        showConfirmModal(rawText);
+      }
     }
   } catch (err) {
-    console.error("Errore OCR:", err);
+    console.error("Errore analisi testo evidenziato:", err);
+  } finally {
+    loader.classList.add('hidden');
   }
+}
+
+// CHIEDI CONFERMA PRIMA DI INSERIRE IL DATO
+function showConfirmModal(text) {
+  let cleaned = text;
+  if (activeStep === 'lot') {
+    cleaned = parseLotCode(text) || text.replace(/[^a-zA-Z0-9.\-]/g, '').trim();
+    document.getElementById('confirm-modal-title').textContent = "Conferma inserimento LOTTO";
+  } else {
+    const parsedDate = parseExpiryDate(text);
+    cleaned = parsedDate ? convertToIsoDate(parsedDate) : text;
+    document.getElementById('confirm-modal-title').textContent = "Conferma inserimento SCADENZA";
+  }
+
+  pendingDetectedText = cleaned;
+  document.getElementById('confirm-detected-text').textContent = cleaned;
+  document.getElementById('ocr-confirm-modal').classList.remove('hidden');
+}
+
+function applyConfirmedText() {
+  if (!pendingDetectedText) return;
+
+  if (activeStep === 'lot') {
+    document.getElementById('input-lot-code').value = pendingDetectedText;
+    document.getElementById('btn-clear-lot').classList.remove('hidden');
+    // Passa automaticamente al Passo 2 (Scadenza) dopo la conferma del lotto!
+    setActiveStep('exp');
+  } else {
+    document.getElementById('input-expiry-date').value = convertToIsoDate(pendingDetectedText);
+    document.getElementById('btn-clear-expiry').classList.remove('hidden');
+  }
+
+  document.getElementById('ocr-confirm-modal').classList.add('hidden');
 }
 
 function parseLotCode(text) {
@@ -625,12 +703,10 @@ function parseExpiryDate(text) {
 
 function convertToIsoDate(dateStr) {
   if (!dateStr) return "";
-  // Se è gg/mm/aaaa -> converte in YYYY-MM-DD per l'input type="date"
   if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
     const [d, m, y] = dateStr.split('/');
     return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
   }
-  // Se è mm/aaaa -> converte in YYYY-MM-01
   if (/^\d{1,2}\/\d{4}$/.test(dateStr)) {
     const [m, y] = dateStr.split('/');
     return `${y}-${String(m).padStart(2, '0')}-01`;
@@ -723,7 +799,7 @@ function renderRecipeEditorUI() {
 
     card.innerHTML = `
       <div class="editor-recipe-header">
-        <input type="text" class="inp-recipe-name" value="${recipe.name}" data-r="${rIndex}" style="font-weight:bold; font-size:14px; background:none; border:1px solid var(--glass-border); color:#fff; padding:4px 8px; border-radius:4px;">
+        <input type="text" class="inp-recipe-name" value="${recipe.name}" data-r="${rIndex}" style="font-weight:bold; font-size:14px; background:none; border:1px solid var(--glass-border); color:var(--text-primary); padding:4px 8px; border-radius:4px;">
         <button class="btn-text-action delete btn-del-recipe" data-r="${rIndex}">Elimina Piatto</button>
       </div>
       <div class="editor-ingredients-list" style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
@@ -945,6 +1021,10 @@ function setupEventListeners() {
     e.target.textContent = isAllChecked ? "Seleziona Tutti" : "Deseleziona Tutti";
   });
 
+  // Eventi Pulsanti Dedicati a 2 Passi
+  document.getElementById('btn-step-lot').addEventListener('click', () => setActiveStep('lot'));
+  document.getElementById('btn-step-exp').addEventListener('click', () => setActiveStep('exp'));
+
   document.getElementById('btn-confirm-next').addEventListener('click', () => nextWizardStep(false));
   document.getElementById('btn-skip-ingredient').addEventListener('click', () => nextWizardStep(true));
   document.getElementById('btn-prev-ingredient').addEventListener('click', prevWizardStep);
@@ -953,10 +1033,19 @@ function setupEventListeners() {
   document.getElementById('btn-abort-session').addEventListener('click', resetWizardToStart);
   document.getElementById('btn-restart-wizard').addEventListener('click', resetWizardToStart);
 
+  // Scatto a Fermo Immagine & Caricamento da Galleria
+  document.getElementById('btn-freeze-capture').addEventListener('click', freezeCameraAndRecognize);
+  document.getElementById('btn-unfreeze-camera').addEventListener('click', unfreezeCamera);
   document.getElementById('btn-file-capture').addEventListener('click', () => {
     document.getElementById('input-ocr-file').click();
   });
   document.getElementById('input-ocr-file').addEventListener('change', handleFilePhotoCapture);
+
+  // Modale di Conferma Testo
+  document.getElementById('btn-confirm-detected').addEventListener('click', applyConfirmedText);
+  document.getElementById('btn-cancel-detected').addEventListener('click', () => {
+    document.getElementById('ocr-confirm-modal').classList.add('hidden');
+  });
 
   document.getElementById('btn-toggle-camera').addEventListener('click', toggleCameraLens);
 
