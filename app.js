@@ -83,7 +83,7 @@ const DEFAULT_EUROSPIN_MODELS = {
   },
   gastronomia: {
     id: "gastronomia",
-    title: "Modulo 2: Gastronomia & Rosticceria",
+    title: "Modulo 2: Gastronomia & Rosticceria (Piano Caldo)",
     code: "Modulo 1 - Istr. N. 1",
     subtitle: "Modulo Scadenze e rintracciabilità gastronomie",
     dateEmit: "Data Emissione: 2016 Rev.01 del 18/10/2016",
@@ -127,9 +127,9 @@ const DEFAULT_EUROSPIN_MODELS = {
       },
       { name: "Fusi al forno", ingredients: [{ name: "Fusi al forno", supplier: "A.I.A" }] },
       { name: "Alette al forno", ingredients: [{ name: "Alette al forno", supplier: "A.I.A" }] },
-      { name: "Arancini Ragu", ingredients: [{ name: "Arancini Ragu", supplier: "Freador" }] },
-      { name: "Arancini Prosc.Mozz", ingredients: [{ name: "Arancini Prosc.Mozz", supplier: "Freador" }] },
-      { name: "Focaccia Barese", ingredients: [{ name: "Focaccia Barese", supplier: "Panifi.Adriano" }] },
+      { name: "Arancini Ragu", ingredients: [{ name: "Arancini Ragu", supplier: "KREADOC" }] },
+      { name: "Arancini Prosc.Mozz", ingredients: [{ name: "Arancini Prosc.Mozz", supplier: "KREADOC" }] },
+      { name: "Focaccia Barese", ingredients: [{ name: "Focaccia Barese", supplier: "Panificio Adriatico" }] },
       { name: "Stinco di prosciutto arrosto", ingredients: [{ name: "Stinco di prosciutto arrosto", supplier: "Raspini" }] },
       { name: "Cotolette", ingredients: [{ name: "Cotolette", supplier: "Amadori" }] },
       { name: "Birbe", ingredients: [{ name: "Birbe", supplier: "Amadori" }] },
@@ -141,7 +141,7 @@ const DEFAULT_EUROSPIN_MODELS = {
 };
 
 // Database Dexie locale
-const db = new Dexie('EurospinHaccpDB_v4');
+const db = new Dexie('EurospinHaccpDB_v7');
 db.version(1).stores({
   sessions: '++id, date, moduleKey, timestamp',
   customModels: 'key',
@@ -150,6 +150,7 @@ db.version(1).stores({
 
 let activeModels = JSON.parse(JSON.stringify(DEFAULT_EUROSPIN_MODELS));
 let customCompanyLogo = null;
+let googleSheetsWebhookUrl = "";
 
 let currentSession = {
   moduleKey: null,
@@ -162,9 +163,7 @@ let currentSession = {
   resultsMap: {}
 };
 
-// Stato a 2 Passi ('lot' = Passo 1 Lotto, 'exp' = Passo 2 Scadenza)
 let activeStep = 'lot';
-
 let cameraStream = null;
 let activeFacingMode = 'environment';
 let ocrWorker = null;
@@ -204,8 +203,13 @@ async function loadCustomSettingsAndModels() {
       customCompanyLogo = savedLogo.value;
       updateLogoUI(customCompanyLogo);
     }
+    const savedSheets = await db.settings.get('googleSheetsUrl');
+    if (savedSheets && savedSheets.value) {
+      googleSheetsWebhookUrl = savedSheets.value;
+      document.getElementById('input-sheets-url').value = googleSheetsWebhookUrl;
+    }
   } catch (e) {
-    console.error("Errore caricamento impostazioni custom:", e);
+    console.error("Errore caricamento impostazioni:", e);
   }
 }
 
@@ -326,7 +330,6 @@ function startSessionTimer() {
   }, 1000);
 }
 
-// GESTIONE DEI PULSANTI DEDICATI A 2 PASSI
 function setActiveStep(step) {
   activeStep = step;
   const btnLot = document.getElementById('btn-step-lot');
@@ -374,11 +377,21 @@ function showCurrentWizardStep() {
   unfreezeCamera();
   setActiveStep('lot');
 
-  const existingMemory = currentSession.scannedLotsMemory[step.ingredientName];
+  const normName = step.ingredientName.trim().toLowerCase();
+  const existingMemory = currentSession.scannedLotsMemory[normName];
   const smartBanner = document.getElementById('smart-reuse-banner');
   
-  if (existingMemory) {
-    document.getElementById('smart-reuse-text').textContent = `Lotto: ${existingMemory.lotCode || 'N/A'} - Scad: ${existingMemory.expiryDate || 'N/A'}`;
+  if (existingMemory && (existingMemory.lotCode || existingMemory.expiryDate)) {
+    if (existingMemory.lotCode) {
+      document.getElementById('input-lot-code').value = existingMemory.lotCode;
+      document.getElementById('btn-clear-lot').classList.remove('hidden');
+    }
+    if (existingMemory.expiryDate) {
+      document.getElementById('input-expiry-date').value = convertToIsoDate(existingMemory.expiryDate);
+      document.getElementById('btn-clear-expiry').classList.remove('hidden');
+    }
+
+    document.getElementById('smart-reuse-text').textContent = `Compilato in automatico da preparazione precedente (Lotto: ${existingMemory.lotCode || 'N/A'} - Scad: ${existingMemory.expiryDate || 'N/A'})`;
     smartBanner.classList.remove('hidden');
   } else {
     smartBanner.classList.add('hidden');
@@ -389,7 +402,8 @@ function showCurrentWizardStep() {
 
 function applySmartReuse() {
   const step = currentSession.flatSteps[currentSession.currentIndex];
-  const memory = currentSession.scannedLotsMemory[step.ingredientName];
+  const normName = step.ingredientName.trim().toLowerCase();
+  const memory = currentSession.scannedLotsMemory[normName];
   if (memory) {
     document.getElementById('input-lot-code').value = memory.lotCode || '';
     if (memory.expiryDate) {
@@ -417,8 +431,9 @@ function nextWizardStep(isSkipped) {
 
   currentSession.resultsMap[step.key] = resultObj;
 
+  const normName = step.ingredientName.trim().toLowerCase();
   if (!isSkipped && (lotVal !== '' || expiryVal !== '')) {
-    currentSession.scannedLotsMemory[step.ingredientName] = {
+    currentSession.scannedLotsMemory[normName] = {
       lotCode: lotVal,
       expiryDate: expiryVal
     };
@@ -456,6 +471,10 @@ async function finishWizardSession() {
   };
   await db.sessions.add(sessionRecord);
 
+  if (googleSheetsWebhookUrl) {
+    sendSessionToGoogleSheets(sessionRecord);
+  }
+
   document.getElementById('summary-module-name').textContent = model.title;
   document.getElementById('summary-recipes-count').textContent = `${currentSession.selectedRecipes.length} su ${model.recipes.length}`;
   
@@ -478,7 +497,7 @@ function resetWizardToStart() {
 }
 
 
-// --- TELECAMERA & OCR INTERATTIVO A FERMO IMMAGINE (STILE IPHONE) ---
+// --- TELECAMERA & OCR INTERATTIVO OPTIMIZED PER ETICHETTE REALI (KREADOC, PANIFICIO ADRIATICO, EUROSPIN) ---
 async function startCamera() {
   stopCamera();
   const notice = document.getElementById('camera-fallback-notice');
@@ -520,7 +539,6 @@ function unfreezeCamera() {
   document.getElementById('ocr-confirm-modal').classList.add('hidden');
 }
 
-// SCATTA E CONGELA IL FRAME PER SELEZIONARE IL TESTO
 async function freezeCameraAndRecognize() {
   if (!cameraStream) {
     document.getElementById('input-ocr-file').click();
@@ -543,7 +561,6 @@ async function freezeCameraAndRecognize() {
   await analyzeAndRenderTextHighlights(canvas);
 }
 
-// FIX CORREZIONE CARICAMENTO DA GALLERIA
 function handleFilePhotoCapture(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -570,13 +587,13 @@ function handleFilePhotoCapture(e) {
   reader.readAsDataURL(file);
 }
 
-// RICONOSCIMENTO TESTO CON RENDERING RIQUADRI EVIDENZIATI EVIDENZIABILI TOCCABILI
+// RICONOSCIMENTO TESTO CON RAGGRUPPAMENTO PER RIGHE INTERE ED EVIDENZIATORI TOCCABILI
 async function analyzeAndRenderTextHighlights(canvas) {
   const loader = document.getElementById('scanner-loader');
   const loaderText = document.getElementById('scanner-loader-text');
   const highlightLayer = document.getElementById('text-highlight-layer');
 
-  loaderText.textContent = "Analisi e ricerca testo sulla confezione...";
+  loaderText.textContent = "Analisi e ricerca testo sulle etichette...";
   loader.classList.remove('hidden');
 
   if (!ocrWorker) {
@@ -590,6 +607,8 @@ async function analyzeAndRenderTextHighlights(canvas) {
 
   try {
     const result = await ocrWorker.recognize(dataUrl);
+    // Utilizza le righe (lines) o parole (words) per creare box completi sulle etichette
+    const lines = result.data.lines || [];
     const words = result.data.words || [];
 
     highlightLayer.innerHTML = '';
@@ -601,34 +620,68 @@ async function analyzeAndRenderTextHighlights(canvas) {
 
     let foundCount = 0;
 
-    words.forEach(word => {
-      const text = word.text.trim();
-      if (text.length < 2) return;
+    // Prima cerca le righe che contengono parole chiave come Lotto, Scad, Da consumarsi
+    lines.forEach(line => {
+      const lineText = line.text.trim();
+      if (lineText.length < 3) return;
 
-      const bbox = word.bbox;
-      const left = bbox.x0 * scaleX;
-      const top = bbox.y0 * scaleY;
-      const width = (bbox.x1 - bbox.x0) * scaleX;
-      const height = (bbox.y1 - bbox.y0) * scaleY;
+      const isKeyLine = /lotto|lot|l\.|scad|exp|consumarsi/i.test(lineText);
+      if (isKeyLine) {
+        const bbox = line.bbox;
+        const left = bbox.x0 * scaleX;
+        const top = bbox.y0 * scaleY;
+        const width = (bbox.x1 - bbox.x0) * scaleX;
+        const height = (bbox.y1 - bbox.y0) * scaleY;
 
-      const boxEl = document.createElement('div');
-      boxEl.className = 'ocr-word-box';
-      boxEl.style.left = `${left}px`;
-      boxEl.style.top = `${top}px`;
-      boxEl.style.width = `${width}px`;
-      boxEl.style.height = `${height}px`;
+        const boxEl = document.createElement('div');
+        boxEl.className = 'ocr-word-box';
+        boxEl.style.left = `${left}px`;
+        boxEl.style.top = `${top}px`;
+        boxEl.style.width = `${width}px`;
+        boxEl.style.height = `${height}px`;
+        boxEl.style.borderColor = '#2563eb';
+        boxEl.style.backgroundColor = 'rgba(37, 99, 235, 0.3)';
 
-      boxEl.addEventListener('click', (e) => {
-        e.stopPropagation();
-        showConfirmModal(text);
-      });
+        boxEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          showConfirmModal(lineText);
+        });
 
-      highlightLayer.appendChild(boxEl);
-      foundCount++;
+        highlightLayer.appendChild(boxEl);
+        foundCount++;
+      }
     });
 
+    // Se non trova righe intere chiave, disegna i riquadri per le singole parole
     if (foundCount === 0) {
-      // Se nessun riquadro specifico è stato trovato, permetti il tocco generico sul testo
+      words.forEach(word => {
+        const text = word.text.trim();
+        if (text.length < 2) return;
+
+        const bbox = word.bbox;
+        const left = bbox.x0 * scaleX;
+        const top = bbox.y0 * scaleY;
+        const width = (bbox.x1 - bbox.x0) * scaleX;
+        const height = (bbox.y1 - bbox.y0) * scaleY;
+
+        const boxEl = document.createElement('div');
+        boxEl.className = 'ocr-word-box';
+        boxEl.style.left = `${left}px`;
+        boxEl.style.top = `${top}px`;
+        boxEl.style.width = `${width}px`;
+        boxEl.style.height = `${height}px`;
+
+        boxEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          showConfirmModal(text);
+        });
+
+        highlightLayer.appendChild(boxEl);
+        foundCount++;
+      });
+    }
+
+    if (foundCount === 0) {
       const rawText = result.data.text.trim();
       if (rawText) {
         showConfirmModal(rawText);
@@ -641,11 +694,11 @@ async function analyzeAndRenderTextHighlights(canvas) {
   }
 }
 
-// CHIEDI CONFERMA PRIMA DI INSERIRE IL DATO
+// CHIEDI CONFERMA ED ESTRAGGI I FORMATI SPECIFICI DELLE ETICHETTE KREADOC E PANIFICIO ADRIATICO
 function showConfirmModal(text) {
   let cleaned = text;
   if (activeStep === 'lot') {
-    cleaned = parseLotCode(text) || text.replace(/[^a-zA-Z0-9.\-]/g, '').trim();
+    cleaned = parseLotCode(text) || text.replace(/[^a-zA-Z0-9./\- ]/g, '').trim();
     document.getElementById('confirm-modal-title').textContent = "Conferma inserimento LOTTO";
   } else {
     const parsedDate = parseExpiryDate(text);
@@ -664,7 +717,6 @@ function applyConfirmedText() {
   if (activeStep === 'lot') {
     document.getElementById('input-lot-code').value = pendingDetectedText;
     document.getElementById('btn-clear-lot').classList.remove('hidden');
-    // Passa automaticamente al Passo 2 (Scadenza) dopo la conferma del lotto!
     setActiveStep('exp');
   } else {
     document.getElementById('input-expiry-date').value = convertToIsoDate(pendingDetectedText);
@@ -674,15 +726,28 @@ function applyConfirmedText() {
   document.getElementById('ocr-confirm-modal').classList.add('hidden');
 }
 
+// PARSER AVANZATO PER ETICHETTE REALI (SUPPORTA / E SPAZI TIPO "L AFPM 03 139 26 G" O "GIU1526/3")
 function parseLotCode(text) {
   if (!text) return "";
   let clean = text.replace(/[\r\n]+/g, ' ').trim();
+  
+  // 1. Cerca righe con "Lotto GIU1526/3" o "L AFPM 03 139 26 G"
+  const lotPattern = /(?:lotto|lot|l\.|l\b)\s*:?\s*([a-zA-Z0-9/\.-]+(?:\s+[a-zA-Z0-9/\.-]+)*)/i;
+  const match = clean.match(lotPattern);
+  if (match) {
+    let extracted = match[1].trim();
+    // Rimuovi eventuali frammenti di data tipo 15/12/2027 presenti nella stessa riga
+    extracted = extracted.replace(/scad\.?\s*\d{1,2}[/\.-]\d{1,2}[/\.-]\d{2,4}/i, '').trim();
+    return extracted;
+  }
+
+  // 2. Pulizia generica se è stata cliccata solo la parola del lotto
+  clean = clean.replace(/^(da consumarsi entro|scad\.?|exp)\s*:?\s*\d{1,2}[/\.-]\d{1,2}[/\.-]\d{2,4}/i, '').trim();
   clean = clean.replace(/^(lotto|lot|l\.)\s*:?\s*/i, '');
-  clean = clean.replace(/[^a-zA-Z0-9.\-]/g, ' ').trim();
-  const parts = clean.split(/\s+/).filter(p => p.length >= 2);
-  return parts.length > 0 ? parts[0].substring(0, 18) : "";
+  return clean.substring(0, 24);
 }
 
+// PARSER AVANZATO DATA DI SCADENZA (DA CONSUMARSI ENTRO: 18/11/2027 O SCAD. 15/12/2027)
 function parseExpiryDate(text) {
   if (!text) return "";
   const fullDateRegex = /\b([0-3]?[0-9][/\.-][0-1]?[0-9][/\.-]20\d{2})\b/;
@@ -724,7 +789,117 @@ function formatIsoToItalianDisplay(isoStr) {
 }
 
 
-// --- GESTIONE LOGO AZIENDALE PERSONALIZZATO ---
+// --- SINCRONIZZAZIONE CLOUD GOOGLE SHEETS VIA WEBHOOK ---
+async function sendSessionToGoogleSheets(sessionData) {
+  if (!googleSheetsWebhookUrl) return;
+
+  try {
+    const response = await fetch(googleSheetsWebhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sessionData)
+    });
+    console.log("Sincronizzazione Google Sheets completata:", response.status);
+  } catch (err) {
+    console.error("Errore invio a Google Sheets:", err);
+  }
+}
+
+
+// --- ESPORTAZIONE EXCEL CON IMPAGINAZIONE 1:1 ED ASTERISCO (*) PER INGREDIENTI RIUSATI ---
+function exportSessionToExcel(sessionData) {
+  const modelKey = sessionData.moduleKey || "pizze";
+  const model = activeModels[modelKey];
+  const resultsMap = sessionData.resultsMap || {};
+
+  const lotCounts = {};
+  Object.values(resultsMap).forEach(r => {
+    if (r.status === 'registrato' && (r.lotCode || r.expiryDate)) {
+      const key = `${r.lotCode}_${r.expiryDate}`;
+      lotCounts[key] = (lotCounts[key] || 0) + 1;
+    }
+  });
+
+  const rows = [];
+  const merges = [];
+
+  rows.push(["EUROSpin", "ISTRUZIONE OPERATIVE INTERNE", "", "", model.dateEmit || "Data Emissione: 2016 Rev. 02 del 15/05/2025"]);
+  merges.push({ s: { r: 0, c: 1 }, e: { r: 0, c: 3 } });
+
+  rows.push(["Modulo 1 - Istr. N. 1", model.subtitle || "Modulo tracciabilità Preparazioni", "", "", model.pageInfo || "Pagina 1 di 2"]);
+  merges.push({ s: { r: 1, c: 1 }, e: { r: 1, c: 3 } });
+
+  rows.push([]);
+
+  rows.push([`Data: ${sessionData.date || formatDate(new Date())}`]);
+  rows.push([]);
+
+  const headerRowIndex = rows.length;
+  rows.push(["Prodotto", "Ingredienti", "", "Lotto", "Scadenza"]);
+  merges.push({ s: { r: headerRowIndex, c: 1 }, e: { r: headerRowIndex, c: 2 } });
+
+  model.recipes.forEach((recipe, rIndex) => {
+    const isPreparedToday = sessionData.selectedRecipes ? sessionData.selectedRecipes.includes(rIndex) : true;
+    const recipeStartRow = rows.length;
+    const ingCount = recipe.ingredients.length;
+
+    recipe.ingredients.forEach((ing, iIndex) => {
+      const stepKey = `${recipe.name}_${ing.name}`;
+      const result = resultsMap[stepKey];
+
+      const recipeNameCol = (iIndex === 0) ? recipe.name : "";
+      let lotVal = (isPreparedToday && result) ? result.lotCode : "";
+      let expVal = (isPreparedToday && result) ? result.expiryDate : "";
+
+      if (lotVal || expVal) {
+        const key = `${lotVal}_${expVal}`;
+        if (lotCounts[key] > 1) {
+          lotVal = lotVal ? `${lotVal}*` : "";
+          expVal = expVal ? `${expVal}*` : "";
+        }
+      }
+
+      rows.push([
+        recipeNameCol,
+        ing.name,
+        "",
+        lotVal,
+        expVal
+      ]);
+
+      const currentRowIndex = rows.length - 1;
+      merges.push({ s: { r: currentRowIndex, c: 1 }, e: { r: currentRowIndex, c: 2 } });
+    });
+
+    if (ingCount > 1) {
+      const recipeEndRow = recipeStartRow + ingCount - 1;
+      merges.push({ s: { r: recipeStartRow, c: 0 }, e: { r: recipeEndRow, c: 0 } });
+    }
+  });
+
+  rows.push([]);
+  const footerRowIndex = rows.length;
+  rows.push(["Gli ingredienti con stesso lotto e scadenza utilizzati in più preparazioni sono contrassegnati con un asterisco"]);
+  merges.push({ s: { r: footerRowIndex, c: 0 }, e: { r: footerRowIndex, c: 4 } });
+
+  const worksheet = XLSX.utils.aoa_to_sheet(rows);
+  worksheet['!merges'] = merges;
+  worksheet['!cols'] = [
+    { wch: 25 },
+    { wch: 32 },
+    { wch: 10 },
+    { wch: 18 },
+    { wch: 18 }
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Tracciabilità 1-1");
+
+  XLSX.writeFile(workbook, `Eurospin_${modelKey}_${(sessionData.date || formatDate(new Date())).replace(/\//g, '-')}.xlsx`);
+}
+
+
+// --- GESTIONE LOGO AZIENDALE PERSONALIZZATO & GOOGLE SHEETS URL ---
 function setupCompanyLogoUploader() {
   const fileInput = document.getElementById('input-logo-file');
   const removeBtn = document.getElementById('btn-remove-custom-logo');
@@ -876,11 +1051,19 @@ async function saveCustomModelsDB() {
 }
 
 
-// --- RENDER FOGLIO 1:1 STAMPABILE CON STRUTTURA EUROSPIN UFFICIALE ---
+// --- RENDER FOGLIO 1:1 STAMPABILE CON STRUTTURA EUROSPIN UFFICIALE & ASTERISCHI ---
 function renderEurospinPaperSheet(sessionData) {
   const modelKey = sessionData.moduleKey || "pizze";
   const model = activeModels[modelKey];
   const resultsMap = sessionData.resultsMap || {};
+
+  const lotCounts = {};
+  Object.values(resultsMap).forEach(r => {
+    if (r.status === 'registrato' && (r.lotCode || r.expiryDate)) {
+      const key = `${r.lotCode}_${r.expiryDate}`;
+      lotCounts[key] = (lotCounts[key] || 0) + 1;
+    }
+  });
 
   document.getElementById('print-date-field').textContent = sessionData.date || formatDate(new Date());
   document.getElementById('paper-subtitle').textContent = model.subtitle || "Modulo tracciabilità Preparazioni";
@@ -926,8 +1109,16 @@ function renderEurospinPaperSheet(sessionData) {
       const stepKey = `${recipe.name}_${ing.name}`;
       const result = resultsMap[stepKey];
       
-      const lotDisplay = (isPreparedToday && result) ? result.lotCode : "";
-      const expDisplay = (isPreparedToday && result) ? result.expiryDate : "";
+      let lotDisplay = (isPreparedToday && result) ? result.lotCode : "";
+      let expDisplay = (isPreparedToday && result) ? result.expiryDate : "";
+
+      if (lotDisplay || expDisplay) {
+        const key = `${lotDisplay}_${expDisplay}`;
+        if (lotCounts[key] > 1) {
+          lotDisplay = lotDisplay ? `${lotDisplay}*` : "";
+          expDisplay = expDisplay ? `${expDisplay}*` : "";
+        }
+      }
 
       tbodyHTML += `<tr>`;
       if (iIndex === 0) {
@@ -961,48 +1152,6 @@ function openPrintPreviewModal() {
 }
 
 
-// --- ESPORTAZIONE EXCEL ---
-function exportSessionToExcel(sessionData) {
-  const modelKey = sessionData.moduleKey || "pizze";
-  const model = activeModels[modelKey];
-  const resultsMap = sessionData.resultsMap || {};
-
-  const rows = [];
-  rows.push(["ISTRUZIONE OPERATIVE INTERNE", "", "", model.dateEmit || "Data Emissione: 2016 Rev. 02 del 15/05/2025"]);
-  rows.push([model.subtitle || "Modulo tracciabilità Preparazioni", "", "", model.pageInfo || "Pagina 1 di 2"]);
-  rows.push([`Data: ${sessionData.date || formatDate(new Date())}`]);
-  rows.push([]);
-
-  rows.push(["Prodotto", "Ingredienti", "Lotto", "Scadenza"]);
-
-  model.recipes.forEach((recipe, rIndex) => {
-    const isPreparedToday = sessionData.selectedRecipes ? sessionData.selectedRecipes.includes(rIndex) : true;
-    
-    recipe.ingredients.forEach(ing => {
-      const stepKey = `${recipe.name}_${ing.name}`;
-      const result = resultsMap[stepKey];
-
-      rows.push([
-        recipe.name,
-        ing.name,
-        (isPreparedToday && result) ? result.lotCode : "",
-        (isPreparedToday && result) ? result.expiryDate : ""
-      ]);
-    });
-  });
-
-  rows.push([]);
-  rows.push(["Gli ingredienti con stesso lotto e scadenza utilizzati in più preparazioni sono contrassegnati con un asterisco"]);
-
-  const worksheet = XLSX.utils.aoa_to_sheet(rows);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Tracciabilità");
-
-  worksheet['!cols'] = [{ wch: 25 }, { wch: 35 }, { wch: 18 }, { wch: 18 }];
-  XLSX.writeFile(workbook, `Eurospin_${modelKey}_${(sessionData.date || formatDate(new Date())).replace(/\//g, '-')}.xlsx`);
-}
-
-
 // --- EVENT LISTENERS GLOBALI ---
 function setupEventListeners() {
   document.getElementById('btn-start-scanning').addEventListener('click', startWizardScanning);
@@ -1021,7 +1170,6 @@ function setupEventListeners() {
     e.target.textContent = isAllChecked ? "Seleziona Tutti" : "Deseleziona Tutti";
   });
 
-  // Eventi Pulsanti Dedicati a 2 Passi
   document.getElementById('btn-step-lot').addEventListener('click', () => setActiveStep('lot'));
   document.getElementById('btn-step-exp').addEventListener('click', () => setActiveStep('exp'));
 
@@ -1033,7 +1181,6 @@ function setupEventListeners() {
   document.getElementById('btn-abort-session').addEventListener('click', resetWizardToStart);
   document.getElementById('btn-restart-wizard').addEventListener('click', resetWizardToStart);
 
-  // Scatto a Fermo Immagine & Caricamento da Galleria
   document.getElementById('btn-freeze-capture').addEventListener('click', freezeCameraAndRecognize);
   document.getElementById('btn-unfreeze-camera').addEventListener('click', unfreezeCamera);
   document.getElementById('btn-file-capture').addEventListener('click', () => {
@@ -1041,7 +1188,6 @@ function setupEventListeners() {
   });
   document.getElementById('input-ocr-file').addEventListener('change', handleFilePhotoCapture);
 
-  // Modale di Conferma Testo
   document.getElementById('btn-confirm-detected').addEventListener('click', applyConfirmedText);
   document.getElementById('btn-cancel-detected').addEventListener('click', () => {
     document.getElementById('ocr-confirm-modal').classList.add('hidden');
@@ -1062,6 +1208,13 @@ function setupEventListeners() {
       resultsMap: currentSession.resultsMap
     };
     exportSessionToExcel(currentData);
+  });
+
+  document.getElementById('btn-save-sheets-url').addEventListener('click', async () => {
+    const url = document.getElementById('input-sheets-url').value.trim();
+    googleSheetsWebhookUrl = url;
+    await db.settings.put({ key: 'googleSheetsUrl', value: url });
+    alert("URL Google Sheets salvato! Le nuove sessioni saranno inviate automaticamente al Cloud.");
   });
 
   setupCompanyLogoUploader();
@@ -1130,7 +1283,7 @@ async function loadHistoryList() {
       </div>
       <div class="history-actions">
         <button class="btn-text-action delete" data-id="${session.id}">Elimina</button>
-        <button class="btn-text-action export" data-id="${session.id}">Vedi 1:1 / PDF</button>
+        <button class="btn-text-action export" data-id="${session.id}">Vedi 1:1 / PDF / Excel</button>
       </div>
     `;
 

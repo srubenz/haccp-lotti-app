@@ -174,16 +174,10 @@
             </div>
 
             <div class="video-wrapper" id="scanner-wrapper">
-              <!-- Streaming Video della Fotocamera -->
               <video id="scanner-video" autoplay playsinline muted></video>
-              
-              <!-- Canvas a Fermo Immagine per Selezione ed Evidenziazione Testo -->
               <canvas id="freeze-canvas" class="freeze-canvas hidden"></canvas>
-
-              <!-- Layer Rettangoli Evidenziati Toccabili -->
               <div id="text-highlight-layer" class="text-highlight-layer hidden"></div>
 
-              <!-- Messaggio Fallback per Connessioni HTTP -->
               <div id="camera-fallback-notice" class="camera-fallback-notice hidden">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
@@ -192,7 +186,6 @@
                 <small>Usa il pulsante "Carica Foto da Galleria" sotto per caricare l'immagine della confezione.</small>
               </div>
 
-              <!-- Mirino Dinamico Ad Ampia Area -->
               <div id="scan-target-box" class="scan-target-box large-area">
                 <div class="corner top-left"></div>
                 <div class="corner top-right"></div>
@@ -234,7 +227,7 @@
             </div>
           </div>
 
-          <!-- MODALE / TOOLTIP DI CONFERMA TESTO EVIDENZIATO -->
+          <!-- MODALE DI CONFERMA TESTO EVIDENZIATO -->
           <div id="ocr-confirm-modal" class="ocr-confirm-modal hidden">
             <div class="confirm-content">
               <span class="confirm-title" id="confirm-modal-title">Conferma inserimento Lotto</span>
@@ -297,7 +290,7 @@
             </svg>
           </div>
           <h2>Modulo Compilato con Successo</h2>
-          <p>Tutti i lotti e le scadenze inseriti sono stati formattati nel modello aziendale.</p>
+          <p>Tutti i lotti e le scadenze inseriti sono stati formattati nel modello aziendale 1:1.</p>
           
           <div class="summary-details">
             <div class="summary-row">
@@ -325,7 +318,7 @@
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <span>Esporta File Excel (.xlsx)</span>
+              <span>Esporta Excel Formattato 1:1 (.xlsx)</span>
             </button>
             <button id="btn-restart-wizard" class="btn btn-neutral">Nuova Compilazione</button>
           </div>
@@ -355,6 +348,25 @@
     <!-- SCHEDA 3: IMPOSTAZIONI -->
     <section id="sec-settings" class="tab-content">
       
+      <!-- INTEGRZIONE GOOGLE SHEETS / CLOUD SYNC -->
+      <div class="card settings-card">
+        <div class="card-header">
+          <h3>Integrazione Cloud Google Sheets</h3>
+          <p>Inserisci l'URL del tuo Webhook Google Sheets per sincronizzare automaticamente ogni compilazione in un unico Foglio Google aziendale condiviso.</p>
+        </div>
+
+        <div class="input-group" style="margin-top: 10px;">
+          <label for="input-sheets-url">URL Webhook Google Sheets (Google Apps Script)</label>
+          <div class="input-wrapper">
+            <input type="text" id="input-sheets-url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="settings-actions" style="margin-top: 10px;">
+          <button id="btn-save-sheets-url" class="btn btn-primary btn-sm">Salva Configurazione Google Sheets</button>
+        </div>
+      </div>
+
       <div class="card settings-card">
         <div class="card-header">
           <h3>Logo Aziendale Personalizzato</h3>
@@ -412,7 +424,7 @@
       </div>
 
       <div class="settings-footer">
-        <p>Eurospin HACCP Gastronomia v5.0 &bull; Modulo tracciabilità Preparazioni Rev. 02 del 15/05/2025</p>
+        <p>Eurospin HACCP Gastronomia v5.2 &bull; Modulo tracciabilità Preparazioni Rev. 02 del 15/05/2025</p>
       </div>
     </section>
 

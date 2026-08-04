@@ -1,4 +1,4 @@
-const CACHE_NAME = 'haccp-lotti-v7';
+const CACHE_NAME = 'haccp-lotti-v10';
 const ASSETS_TO_CACHE = [
   'index.html',
   'style.css',
@@ -10,7 +10,7 @@ const ASSETS_TO_CACHE = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker v7] Pre-caching core assets with Interactive Freeze-Frame OCR & 2-Step Flow');
+      console.log('[Service Worker v10] Pre-caching core assets tuned for KREADOC & Panificio Adriatico labels');
       return cache.addAll(ASSETS_TO_CACHE);
     }).then(() => self.skipWaiting())
   );
@@ -22,7 +22,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('[Service Worker v7] Eliminazione vecchio cache:', cacheName);
+            console.log('[Service Worker v10] Eliminazione vecchio cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
